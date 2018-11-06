@@ -1,0 +1,8 @@
+{
+    "name": "Unity.AssetTools.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
