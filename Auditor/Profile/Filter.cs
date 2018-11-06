@@ -19,10 +19,8 @@ namespace AssetTools
 			FolderName,
 			Directory,
 			Extension,
-			ImporterType,
 			AssetBundle,
 			FileSize,
-
 			Labels
 			// TODO investigate more using post processing, Texture width etc. This will require multiple imports which can result in slow import times
 		}
@@ -90,7 +88,6 @@ namespace AssetTools
 							return false;
 						break;
 					case ConditionTarget.FolderName:
-						// TODO, do for when directory
 						if( fi.Directory == null || !Target( fi.Directory.Name, filters[i] ) )
 							return false;
 						break;
@@ -100,22 +97,19 @@ namespace AssetTools
 							return false;
 						break;
 					case ConditionTarget.Extension:
-						if( fi == null || !Target( fi.Extension, filters[i] ) )
+						if( !Target( fi.Extension, filters[i] ) )
 							return false;
 						break;
 					case ConditionTarget.FileSize:
-						if( fi == null || !Target( fi.Length, filters[i] ) )
+						if( !Target( fi.Length, filters[i] ) )
 							return false;
 						break;
 					case ConditionTarget.AssetBundle:
 						if( !Target( importer.assetBundleName, filters[i] ) )
 							return false;
 						break;
-					case ConditionTarget.ImporterType:
-						Debug.Log( importer.GetType().Name + "   " + importer.assetPath );
-						break;
 					case ConditionTarget.Labels:
-						// TODO get labels and check (fullname?)
+						// TODO get labels and check, each individually?
 						Debug.Log( "need to implement this" );
 						break;
 					default:
@@ -153,7 +147,7 @@ namespace AssetTools
 			int wildcard;
 			if( int.TryParse( filter.m_Wildcard, out wildcard ) == false )
 			{
-				Debug.LogError( "Wildcard not long parsable \"" + filter.m_Wildcard + "\"" );
+				Debug.LogError( string.Format( "Wildcard as number is not long parsable \"{0}\"", filter.m_Wildcard ) );
 				return false;
 			}
 

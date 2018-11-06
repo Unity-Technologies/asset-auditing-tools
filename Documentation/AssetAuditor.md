@@ -34,7 +34,6 @@ Filter Target, Indicates what you want to search on:
 * *FolderName* - Just the folder that contains the Asset.
 * *Directory* - The full Folder Path to the Asset (Not including the Asset).
 * *Extension* - Just the extension of the Asset.
-* *ImporterType* - e.g. TextureImporter, ModelImporter.
 * *AssetBundle* - The AssetBundle name the Asset is assigned to.
 * *FileSize* - The size on disk of the Asset (Not imported size).
 * *Labels* - Labels assigned to the Asset.

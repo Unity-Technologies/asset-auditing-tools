@@ -32,8 +32,10 @@ namespace AssetTools
 			
 			if( assetImporter == null )
 				assetImporter = AssetImporter.GetAtPath( path );
+			
 			assetImporter.SaveAndReimport();
 			icon = AssetDatabase.GetCachedIcon( path ) as Texture2D;
+			
 			if( !conforms )
 			{
 				conforms = true;
@@ -114,7 +116,7 @@ namespace AssetTools
 			// early out if there are no affected assets
 			if( associatedAssets.Count == 0 )
 			{
-				Debug.Log( "no affected assets " );
+				Debug.Log( "No matching assets found for " + profile.name );
 				return;
 			}
 
@@ -386,7 +388,7 @@ namespace AssetTools
 				m_PropertyList.Reload();
 			}
 			else
-				Debug.LogError( "could not add 'sibling' with no bundles selected" );
+				Debug.LogError( "Could not fix Asset with no Assets selected." );
 		}
 	}
 
