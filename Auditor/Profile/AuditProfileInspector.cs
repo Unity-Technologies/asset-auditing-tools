@@ -19,8 +19,15 @@ namespace AssetTools
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
 
 			layout.Space( 10 );
-			// TODO use SerialisedObject and Properties???
-			current.m_ImporterReference = EditorGUI.ObjectField( layout.Get(), "Template", current.m_ImporterReference, typeof(UnityEngine.Object), false );
+
+			using( var check = new EditorGUI.ChangeCheckScope() )
+			{
+				// TODO use SerialisedObject and Properties???
+				current.m_ImporterReference = EditorGUI.ObjectField( layout.Get(), "Template", current.m_ImporterReference, typeof(UnityEngine.Object), false );
+				
+				if( check.changed )
+					current.GatherProperties();
+			}
 
 			layout.Space( 10 );
 			EditorGUI.LabelField( layout.Get(), "Search Filter's:" );
@@ -74,8 +81,6 @@ namespace AssetTools
 
 			layout.Space( 20 );
 			EditorGUI.LabelField( layout.Get(), "Constrain to Properties:" );
-
-			current.GatherProperties();
 
 			boxAreaRect = layout.Get( Mathf.Max( (current.PropertyCount * layout.layoutHeight) + 6, 20 ) );
 			GUI.Box( boxAreaRect, GUIContent.none );

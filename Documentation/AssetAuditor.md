@@ -36,13 +36,13 @@ Filter Target, Indicates what you want to search on:
 * *Extension* - Just the extension of the Asset.
 * *AssetBundle* - The AssetBundle name the Asset is assigned to.
 * *FileSize* - The size on disk of the Asset (Not imported size).
-* *Labels* - Labels assigned to the Asset.
+* *Labels* - Labels assigned to the Asset. (Only supports Contains, DoesNotContain and Equals). Full string of the label must be included and be a comma separated per label without spaces.
 
 Filter Condition, Indicates how you want to see if the Target is a match:
 * *Contains* - Target can contain the wildcard anywhere.
 * *Equals* - Target must match the wildcard precisely.
-* *Regex* - Use a Regular Expression as the wildcard.
 * *DoesNotContain* - Target cannot contain the wildcard string.
+* *Regex* - Use a Regular Expression as the wildcard.
 * *StartsWith* - Target starts with the wildcard.
 * *EndsWith* - Target ends with the wildcard.
 * *GreaterThan* - Used when Target is a number, true when greater than the wildcard.
@@ -76,3 +76,4 @@ Right clicking on an Asset that does not conform to list options to fix the Asse
       if this is valid, then would be good to have contain to properties as a reverse so can easily disable user-data
       or automatically ignore user-data
  * Implement TestRunner tests
+ * Conformity check - A way to check all profiles and see which have Assets that do not conform

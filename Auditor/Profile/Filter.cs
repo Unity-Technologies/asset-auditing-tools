@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -109,8 +110,56 @@ namespace AssetTools
 							return false;
 						break;
 					case ConditionTarget.Labels:
-						// TODO get labels and check, each individually?
-						Debug.Log( "need to implement this" );
+						string[] wildLabels = filters[i].m_Wildcard.Split( ',' );
+						string[] labels = AssetDatabase.GetLabels( AssetDatabase.LoadAssetAtPath<UnityEngine.Object>( importer.assetPath ) );
+						switch( filters[i].m_Condition )
+						{
+							case Condition.Equals:
+								if( wildLabels.Length != labels.Length )
+									return false;
+								for( int wlId = 0; wlId < wildLabels.Length; ++wlId )
+								{
+									bool contains = false;
+									for( int lId = 0; lId < labels.Length; ++lId )
+									{
+                                        if( wildLabels[wlId].Equals( labels[lId], StringComparison.OrdinalIgnoreCase ) )
+										{
+											contains = true;
+											break;
+										}
+									}
+									if( contains == false )
+										return false;
+								}
+								return true;
+							case Condition.Contains:
+                                for (int wlId = 0; wlId < wildLabels.Length; ++wlId)
+                                {
+                                    bool contains = false;
+                                    for (int lId = 0; lId < labels.Length; ++lId)
+                                    {
+                                        if( wildLabels[wlId].Equals(labels[lId], StringComparison.OrdinalIgnoreCase) )
+                                        {
+                                            contains = true;
+                                            break;
+                                        }
+                                    }
+                                    if( contains == false )
+                                        return false;
+                                }
+                                return true;
+							case Condition.DoesNotContain:
+                                for (int wlId = 0; wlId < wildLabels.Length; ++wlId)
+                                {
+                                    for (int lId = 0; lId < labels.Length; ++lId)
+                                    {
+                                        if (wildLabels[wlId].Equals(labels[lId], StringComparison.OrdinalIgnoreCase))
+                                            return false;
+                                    }
+                                }
+                                return true;
+						}
+
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();
@@ -122,28 +171,34 @@ namespace AssetTools
 
 		private static bool Target( string target, Filter filter )
 		{
-			// TODO decide on if case sensitivity should be disabled
+			Assert.IsNotNull( target );
+			Assert.IsNotNull( filter );
+			Assert.IsNotNull( filter.m_Wildcard );
+			
 			switch( filter.m_Condition )
 			{
 				case Condition.Equals:
-					return target.Equals( filter.m_Wildcard );
+					return target.Equals( filter.m_Wildcard, StringComparison.OrdinalIgnoreCase );
 				case Condition.Contains:
 					return target.Contains( filter.m_Wildcard );
 				case Condition.DoesNotContain:
 					return !target.Contains( filter.m_Wildcard );
 				case Condition.EndsWith:
-					return target.EndsWith( filter.m_Wildcard );
+					return target.EndsWith( filter.m_Wildcard, StringComparison.OrdinalIgnoreCase );
 				case Condition.StartsWith:
-					return target.StartsWith( filter.m_Wildcard );
+					return target.StartsWith( filter.m_Wildcard, StringComparison.OrdinalIgnoreCase );
 				case Condition.Regex:
 					return Regex.IsMatch( target, filter.m_Wildcard );
 				default:
-					throw new ArgumentOutOfRangeException();
+					throw new Exception( );
 			}
 		}
 
 		private static bool Target( long target, Filter filter )
 		{
+			Assert.IsNotNull( filter );
+			Assert.IsNotNull( filter.m_Wildcard );
+			
 			int wildcard;
 			if( int.TryParse( filter.m_Wildcard, out wildcard ) == false )
 			{
