@@ -61,15 +61,23 @@ namespace AssetTools
 
 		public static bool Conforms( string path, IList<Filter> filters )
 		{
-			return Conforms( AssetImporter.GetAtPath( path ), filters );
+			AssetImporter importerForPath = AssetImporter.GetAtPath( path );
+			if( importerForPath == null )
+			{
+				Debug.LogError( "Could not find importer for " + path );
+				return false;
+			}
+			return Conforms( importerForPath, filters );
 		}
 
 		public static bool Conforms( AssetImporter importer, IList<Filter> filters )
 		{
-			if( filters == null || filters.Count == 0 )
+			if( importer == null || filters == null || filters.Count == 0 )
 				return true;
 
 			FileInfo fi = new FileInfo( importer.assetPath );
+			if( fi == null )
+				Debug.Log( "FI NULL " + importer.assetPath );
 			DirectoryInfo di = new DirectoryInfo( importer.assetPath );
 			
 			Assert.IsTrue( fi.Exists || di.Exists );
@@ -80,7 +88,8 @@ namespace AssetTools
 				{
 					case ConditionTarget.Filename:
 						string name = fi.Name;
-						name = name.Remove( name.Length - fi.Extension.Length );
+						if( ! string.IsNullOrEmpty( fi.Extension ) )
+							name = name.Remove( name.Length - fi.Extension.Length );
 						if( !Target( name, filters[i] ) )
 							return false;
 						break;

@@ -136,7 +136,7 @@ namespace AssetTools
 				//m_FixAction = FixCallback;
 			}
 
-			if( m_AssetList == null )
+			if( m_AssetList == null || m_PropertyList == null )
 			{
 				RefreshData();
 			}
@@ -154,7 +154,8 @@ namespace AssetTools
 			m_AssetList.OnGUI( new Rect( 0, listY, position.width, (int)(position.height * m_SplitterPercent) - listY ) );
 			
 			listY = (int)(position.height * m_SplitterPercent) + 3;
-			m_PropertyList.OnGUI( new Rect( 0, listY, position.width, position.height - listY ) );
+			float h = position.height - listY;
+			m_PropertyList.OnGUI( new Rect( 0, listY, position.width, h ) );
 			
 			if( m_ResizingSplitter )
 				Repaint();
@@ -168,10 +169,6 @@ namespace AssetTools
 			{
 				popupList[i] = profileNames[i];
 			}
-
-//			popupList[profileNames.Count] = "New Profile";
-//			popupList[profileNames.Count+1] = "Rename Profile";
-//			popupList[profileNames.Count+2] = "Delete Profile";
 
 			int preSelected = selected;
 			selected = EditorGUI.Popup( profileDropDownRect, selected, popupList );

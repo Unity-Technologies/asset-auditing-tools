@@ -77,3 +77,4 @@ Right clicking on an Asset that does not conform to list options to fix the Asse
       or automatically ignore user-data
  * Implement TestRunner tests
  * Conformity check - A way to check all profiles and see which have Assets that do not conform
+ * Try out property view with a multicolumnheader

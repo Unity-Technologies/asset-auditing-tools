@@ -10,48 +10,6 @@ using Assert = UnityEngine.Assertions.Assert;
 
 namespace AssetTools
 {
-
-	internal class PropertyViewItem : TreeViewItem
-	{
-		internal bool conforms { get; set; }
-		internal PropertyConformData propertyData { get; set; }
-		internal AssetViewItem assetViewItem { get; set; }
-		
-		internal PropertyViewItem( int id, int depth, string displayName, bool propertyConforms ) : base( id, depth, displayName )
-		{
-			conforms = propertyConforms;
-		}
-		
-		internal PropertyViewItem( string activePath, int depth, PropertyConformData data )
-		{
-			base.id = activePath.GetHashCode();
-			base.depth = depth;
-			conforms = data.Conforms;
-			propertyData = data;
-			
-			if( conforms || data.TemplateType == SerializedPropertyType.Generic )
-				base.displayName = data.propertyName;
-			else
-				base.displayName = data.propertyName + ",  <<<  " + data.TemplateValue;
-		}
-
-		public void CopyProperty()
-		{
-			assetViewItem.assetObject.CopyFromSerializedProperty( propertyData.templateSerializedProperty );
-			if( !assetViewItem.assetObject.ApplyModifiedProperties() )
-			{
-				Debug.LogError( "copy failed" );
-			}
-			else
-			{
-				propertyData.Conforms = true;
-				conforms = true;
-				displayName = propertyData.propertyName;
-				assetViewItem.Apply();
-			}
-		}
-	}
-
 	internal class PropertyDetailList : TreeView
 	{
 		private static Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
@@ -67,7 +25,11 @@ namespace AssetTools
 		{
 			selectedItems = selection;
 			Reload();
-			SetExpanded( new int[]{ "Properties:".GetHashCode() } );
+			if( selection.Count > 0 )
+			{
+				// TODO expand so many, but not all if multi selected
+				SetExpanded( new int[] {(selection[0].displayName + ":").GetHashCode()} );
+			}
 		}
 
 		protected override TreeViewItem BuildRoot()
@@ -83,30 +45,34 @@ namespace AssetTools
 
 		internal static void GenerateTreeElements( AssetViewItem assetItem, TreeViewItem root )
 		{
-			string activePath = "Properties:";
-			PropertyViewItem propertyRoot = new PropertyViewItem( activePath.GetHashCode(), 1, activePath, true );
+			string activePath = assetItem.displayName + ":";
+			PropertyViewItem propertyRoot = new PropertyViewItem( activePath.GetHashCode(), 0, activePath, true );
+			propertyRoot.icon = assetItem.icon;
 			if( propertyRoot.children == null )
 				propertyRoot.children = new List<TreeViewItem>();
 			root.AddChild( propertyRoot );
 
-			List<PropertyConformData> data = assetItem.conformData;
+			List<IConformObject> data = assetItem.conformData;
 			for( int i = 0; i < data.Count; ++i )
 			{
-				AddChildProperty( activePath, propertyRoot, data[i], assetItem, 2 );
+				// Add all ConformObject's that are properties
+				if( data[i] is PropertyConformObject )
+					AddChildProperty( activePath, propertyRoot, data[i] as PropertyConformObject, assetItem, 1 );
 			}
 		}
 
-		internal static void AddChildProperty( string parentPath, PropertyViewItem parent, PropertyConformData data, AssetViewItem assetItem, int depth, int arrayIndex = -1 )
+		internal static void AddChildProperty( string parentPath, PropertyViewItem parent, PropertyConformObject propertyConformObject, AssetViewItem assetItem, int depth, int arrayIndex = -1 )
 		{
 			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
-			string activePath = parentPath + data.propertyName + extra;
-			PropertyViewItem property = new PropertyViewItem( activePath, depth, data );
+			string activePath = parentPath + propertyConformObject.Name + extra;
+			PropertyViewItem property = new PropertyViewItem( activePath, depth, propertyConformObject );
 			property.assetViewItem = assetItem;
 			parent.AddChild( property );
 
-			for( int i=0; i<data.subData.Count; ++i )
+			for( int i=0; i<propertyConformObject.SubObjects.Count; ++i )
 			{
-				AddChildProperty( activePath, property, data.subData[i], assetItem, depth+1, data.assetSerializedProperty.isArray ? i : -1 );
+				if( propertyConformObject.SubObjects[i] is PropertyConformObject )
+					AddChildProperty( activePath, property, propertyConformObject.SubObjects[i] as PropertyConformObject, assetItem, depth+1, propertyConformObject.AssetSerializedProperty.isArray ? i : -1 );
 			}
 		}
 
@@ -131,12 +97,12 @@ namespace AssetTools
 					GUI.color = k_ConformFailColor;
 				}
 				
-				if( item.propertyData != null && item.propertyData.assetSerializedProperty.propertyType != SerializedPropertyType.Generic && r.width > 400 )
+				if( item.propertyConformObject != null && item.propertyConformObject.AssetSerializedProperty.propertyType != SerializedPropertyType.Generic && r.width > 400 )
 				{
 					Rect or = new Rect(r);
 					or.x += r.width - 100;
 					or.width = 100;
-					EditorGUI.LabelField( or, item.propertyData.AssetValue );
+					EditorGUI.LabelField( or, item.propertyConformObject.AssetValue );
 				}
 
 				r = args.rowRect;
@@ -163,17 +129,17 @@ namespace AssetTools
 				return;
 			
 			GenericMenu menu = new GenericMenu();
-			if( item.propertyData.TemplateType == SerializedPropertyType.Generic )
+			if( item.propertyConformObject.TemplateType == SerializedPropertyType.Generic )
 			{
 				menu.AddItem( new GUIContent( "Set children to Template Values" ), false, FixCallback, item );
 			}
-			else if( item.propertyData.TemplateType == SerializedPropertyType.ArraySize )
+			else if( item.propertyConformObject.TemplateType == SerializedPropertyType.ArraySize )
 			{
 				menu.AddDisabledItem( new GUIContent( "Cannot set array size" ) );
 			}
 			else
 			{
-				menu.AddItem( new GUIContent( "Set to " + item.propertyData.TemplateValue ), false, FixCallback, item );
+				menu.AddItem( new GUIContent( "Set to " + item.propertyConformObject.TemplateValue ), false, FixCallback, item );
 			}
 			menu.ShowAsContext();
 		}

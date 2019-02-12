@@ -6,19 +6,17 @@ using UnityEditor;
 namespace AssetTools
 {
 
-	public class PropertyConformData
+	public class PropertyConformObject : IConformObject
 	{
-		public bool m_Conforms = true;
-
 		public bool Conforms
 		{
 			get
 			{
-				if( assetSerializedProperty.propertyType == SerializedPropertyType.Generic )
+				if( m_AssetSerializedProperty.propertyType == SerializedPropertyType.Generic )
 				{
-					for( int i = 0; i < subData.Count; ++i )
+					for( int i = 0; i < m_SubObjects.Count; ++i )
 					{
-						if( !subData[i].Conforms )
+						if( !m_SubObjects[i].Conforms )
 							return false;
 					}
 				}
@@ -26,42 +24,71 @@ namespace AssetTools
 			}
 			set { m_Conforms = value; }
 		}
-		public string propertyName;
 
-		public List<PropertyConformData> subData = new List<PropertyConformData>();
-		
-		internal SerializedProperty templateSerializedProperty;
-		internal SerializedProperty assetSerializedProperty;
-		
-
-		public PropertyConformData( string name )
+		public List<IConformObject> SubObjects
 		{
-			propertyName = name;
+			get { return m_SubObjects; }
+			set { m_SubObjects = value; }
+		}
+
+		public string Name
+		{
+			get { return m_PropertyName; }
+			set { m_PropertyName = value; }
+		}
+
+		private bool m_Conforms = true;
+		private List<IConformObject> m_SubObjects = new List<IConformObject>();
+		private string m_PropertyName;
+
+		private SerializedProperty m_TemplateSerializedProperty;
+		private SerializedProperty m_AssetSerializedProperty;
+		
+
+		public PropertyConformObject( string name )
+		{
+			m_PropertyName = name;
+		}
+		
+		public PropertyConformObject( string name, SerializedProperty template, SerializedProperty asset )
+		{
+			m_PropertyName = name;
+			SetSerializedProperties( template, asset );
 		}
 
 		public void SetSerializedProperties( SerializedProperty template, SerializedProperty asset )
 		{
-			templateSerializedProperty = template;
-			assetSerializedProperty = asset;
+			m_TemplateSerializedProperty = template;
+			m_AssetSerializedProperty = asset;
 			Conforms = CompareSerializedProperty( asset, template );
 		}
 
-		public string TemplateValue
+		public SerializedProperty TemplateSerializedProperty
 		{
-			get { return GetValue( templateSerializedProperty ); }
+			get { return m_TemplateSerializedProperty; }
 		}
 		
+		public string TemplateValue
+		{
+			get { return GetValue( m_TemplateSerializedProperty ); }
+		}
+
 		public SerializedPropertyType TemplateType
 		{
-			get { return templateSerializedProperty.propertyType; }
+			get { return m_TemplateSerializedProperty.propertyType; }
+		}
+
+		public SerializedProperty AssetSerializedProperty
+		{
+			get { return m_AssetSerializedProperty; }
 		}
 
 		public string AssetValue
 		{
-			get { return GetValue( assetSerializedProperty ); }
+			get { return GetValue( m_AssetSerializedProperty ); }
 		}
 
-		string GetValue( SerializedProperty property )
+		private string GetValue( SerializedProperty property )
 		{
 			if( property == null )
 				return "";
@@ -120,14 +147,14 @@ namespace AssetTools
 			return "";
 		}
 
-		public bool CompareSerializedProperty( SerializedProperty baseAssetSP, SerializedProperty templateSp )
+		private bool CompareSerializedProperty( SerializedProperty baseAssetSP, SerializedProperty templateSp )
 		{
 			if( baseAssetSP.propertyPath == "m_FileIDToRecycleName" )
 				return true; // the file ids will always be different so we should skip over this.
 
 			switch( baseAssetSP.propertyType )
 			{
-				case SerializedPropertyType.Generic: // this eventually goes down through the data until we get a useable value to compare 
+				case SerializedPropertyType.Generic: // this eventually goes down through the @object until we get a useable value to compare 
 
 					SerializedProperty assetSPTarget = baseAssetSP.Copy();
 					SerializedProperty templateSPTarget = templateSp.Copy();
@@ -150,10 +177,7 @@ namespace AssetTools
 
 						if( SerializedProperty.EqualContents( assetSPTarget, baseAssetSP ) == false )
 						{
-							PropertyConformData conformData = new PropertyConformData( templateSPTarget.name );
-							conformData.SetSerializedProperties( templateSPTarget.Copy(), assetSPTarget.Copy() );
-							
-							subData.Add( conformData );
+							m_SubObjects.Add( new PropertyConformObject( templateSPTarget.name, templateSPTarget.Copy(), assetSPTarget.Copy() ) );
 
 							if( templateSPTarget.propertyType != SerializedPropertyType.Generic )
 							{
