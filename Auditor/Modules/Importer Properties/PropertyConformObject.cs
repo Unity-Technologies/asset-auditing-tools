@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using UnityEditor;
 
@@ -12,13 +13,13 @@ namespace AssetTools
 		{
 			get
 			{
-				if( m_AssetSerializedProperty.propertyType == SerializedPropertyType.Generic )
+				if( m_AssetSerializedProperty.propertyType != SerializedPropertyType.Generic )
+					return m_Conforms;
+				
+				for( int i = 0; i < m_SubObjects.Count; ++i )
 				{
-					for( int i = 0; i < m_SubObjects.Count; ++i )
-					{
-						if( !m_SubObjects[i].Conforms )
-							return false;
-					}
+					if( !m_SubObjects[i].Conforms )
+						return false;
 				}
 				return m_Conforms;
 			}
@@ -33,7 +34,12 @@ namespace AssetTools
 
 		public string Name
 		{
-			get { return m_PropertyName; }
+			get
+			{
+				if( TemplateType == SerializedPropertyType.Generic )
+					return m_PropertyName;
+				return m_PropertyName + ",  <<<  " + TemplateValue;
+			}
 			set { m_PropertyName = value; }
 		}
 
@@ -49,8 +55,8 @@ namespace AssetTools
 		{
 			m_PropertyName = name;
 		}
-		
-		public PropertyConformObject( string name, SerializedProperty template, SerializedProperty asset )
+
+		private PropertyConformObject( string name, SerializedProperty template, SerializedProperty asset )
 		{
 			m_PropertyName = name;
 			SetSerializedProperties( template, asset );
@@ -88,7 +94,7 @@ namespace AssetTools
 			get { return GetValue( m_AssetSerializedProperty ); }
 		}
 
-		private string GetValue( SerializedProperty property )
+		private static string GetValue( SerializedProperty property )
 		{
 			if( property == null )
 				return "";
@@ -102,7 +108,7 @@ namespace AssetTools
 				case SerializedPropertyType.Boolean:
 					return property.boolValue.ToString();
 				case SerializedPropertyType.Float:
-					return property.floatValue.ToString();
+					return property.floatValue.ToString( CultureInfo.CurrentCulture );
 				case SerializedPropertyType.String:
 					return property.stringValue;
 				case SerializedPropertyType.Color:
@@ -154,16 +160,16 @@ namespace AssetTools
 
 			switch( baseAssetSP.propertyType )
 			{
-				case SerializedPropertyType.Generic: // this eventually goes down through the @object until we get a useable value to compare 
+				case SerializedPropertyType.Generic: // this eventually goes down through the @object until we get a usable value to compare 
 
 					SerializedProperty assetSPTarget = baseAssetSP.Copy();
 					SerializedProperty templateSPTarget = templateSp.Copy();
 
 					// we must get the next sibling SerializedProperties to know when to stop the comparison
 					SerializedProperty assetSiblingSP = baseAssetSP.Copy();
-					SerializedProperty templateSiblineSP = templateSp.Copy();
+					SerializedProperty templateSiblingSP = templateSp.Copy();
 					assetSiblingSP.NextVisible( false );
-					templateSiblineSP.NextVisible( false );
+					templateSiblingSP.NextVisible( false );
 
 					bool asset, found;
 					bool enterChildren = true;
@@ -172,7 +178,7 @@ namespace AssetTools
 					{
 						if( templateSPTarget.propertyType != assetSPTarget.propertyType )
 						{
-							return false; // mistmatch in types different serialisation
+							return false; // mismatch in types different serialisation
 						}
 
 						if( SerializedProperty.EqualContents( assetSPTarget, baseAssetSP ) == false )
@@ -189,9 +195,9 @@ namespace AssetTools
 						found = templateSPTarget.NextVisible( enterChildren );
 						enterChildren = false; // only enter first child, then only siblings
 					} while( found && asset &&
-					         // once it hits a sibline, end
+					         // once it hits a sibling, end
 					         !SerializedProperty.EqualContents( assetSPTarget, assetSiblingSP ) &&
-					         !SerializedProperty.EqualContents( templateSPTarget, templateSiblineSP ) );
+					         !SerializedProperty.EqualContents( templateSPTarget, templateSiblingSP ) );
 
 					return true;
 				case SerializedPropertyType.Integer:
@@ -205,7 +211,7 @@ namespace AssetTools
 				case SerializedPropertyType.Color:
 					return baseAssetSP.colorValue == templateSp.colorValue;
 				case SerializedPropertyType.ObjectReference:
-					return true; // this is weird on models imports and needs a solution as the exposed transforms reference the model itself
+					return true; // TODO this is weird on models imports and needs a solution as the exposed transforms reference the model itself
 				case SerializedPropertyType.LayerMask:
 					break;
 				case SerializedPropertyType.Enum:

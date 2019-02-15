@@ -21,16 +21,6 @@ namespace AssetTools
 			layout.Space( 10 );
 
 			m_Profile.m_RunOnImport = EditorGUI.Toggle( layout.Get(), "Process On Import", m_Profile.m_RunOnImport );
-
-			using( var check = new EditorGUI.ChangeCheckScope() )
-			{
-				// TODO use SerialisedObject and Properties???
-				m_Profile.m_ImporterReference = EditorGUI.ObjectField( layout.Get(), "Template", m_Profile.m_ImporterReference, typeof(UnityEngine.Object), false );
-				
-				if( check.changed )
-					m_Profile.m_ImporterModule.GatherProperties();
-			}
-
 			
 			layout.Space( 10 );
 

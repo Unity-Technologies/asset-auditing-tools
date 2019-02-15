@@ -21,17 +21,15 @@ namespace AssetTools
 			conforms = propertyConforms;
 		}
 		
-		internal PropertyViewItem( string activePath, int depth, PropertyConformObject conformObject )
+		internal PropertyViewItem( string activePath, int depth, IConformObject conformObject )
 		{
+			Assert.IsTrue( conformObject is PropertyConformObject );
 			base.id = activePath.GetHashCode();
 			base.depth = depth;
 			conforms = conformObject.Conforms;
-			propertyConformObject = conformObject;
+			propertyConformObject = (PropertyConformObject)conformObject;
 			
-			if( conforms || conformObject.TemplateType == SerializedPropertyType.Generic )
-				base.displayName = conformObject.Name;
-			else
-				base.displayName = conformObject.Name + ",  <<<  " + conformObject.TemplateValue;
+			base.displayName = conformObject.Name;
 		}
 
 		public void CopyProperty()

@@ -6,34 +6,70 @@ using UnityEngine;
 
 namespace AssetTools
 {
+	/// <summary>
+	/// TODO test this
+	/// will this work for just any SerialisedObject, like ScriptableObject??
+	/// SerialisedPropertiesModule
+	/// </summary>
+	
 	[System.Serializable]
-	public class ImporterPropertiesModule
+	public class ImporterPropertiesModule : IImportProcessModule
 	{
-		public UnityEngine.Object ImporterReference
-		{
-			get { return m_Profile == null ? null : m_Profile.m_ImporterReference; }
-		}
-		
 		public List<string> m_ConstrainProperties = new List<string>();
 
 		[NonSerialized] public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
 		[NonSerialized] public List<SerializedProperty> m_SerialisedProperties = new List<SerializedProperty>();
 		private int m_HasProperties = 0;
 		
-		internal AuditProfile m_Profile = null;
+		public UnityEngine.Object m_ImporterReference = null;
 		
-		private AssetImporter m_ProfilerAssetImporter;
-		public AssetImporter ProfileAssetImporter
+#if UNITY_2018_1_OR_NEWER
+		// TODO on 2018 allow for the use of a Preset instead of an Object reference
+		public Preset m_Preset;
+#endif
+		
+		
+		private AssetType GetAssetType()
+		{
+			if( m_ImporterReference == null )
+			{
+				//Debug.LogError( string.Format("Template not set in Profile \"{0}\"", name) );
+				return AssetType.NA;
+			}
+
+			string path = AssetDatabase.GetAssetPath( m_ImporterReference );
+			AssetImporter a = AssetImporter.GetAtPath( path );
+			if( AssetDatabase.IsValidFolder( path ) )
+				return AssetType.Folder;
+			if( a is TextureImporter )
+				return AssetType.Texture;
+			if( a is ModelImporter )
+				return AssetType.Model;
+			if( a is AudioImporter )
+				return AssetType.Audio;
+			
+			throw new IndexOutOfRangeException( string.Format( "ReferenceAssetImporter {0}, not a supported Type", a.GetType().Name ) );
+		}
+
+		
+		
+		private AssetImporter GetAssetImporter()
+		{
+			return AssetImporter.GetAtPath( AssetDatabase.GetAssetPath( m_ImporterReference ) );
+		}
+
+		private AssetImporter m_AssetImporter;
+		public AssetImporter ReferenceAssetImporter
 		{
 			get
 			{
-				if( m_ProfilerAssetImporter == null )
-					m_ProfilerAssetImporter = AssetImporter.GetAtPath( AssetDatabase.GetAssetPath( ImporterReference ) );
-				return m_ProfilerAssetImporter;
+				if( m_AssetImporter == null && m_ImporterReference != null )
+					m_AssetImporter = AssetImporter.GetAtPath( AssetDatabase.GetAssetPath( m_ImporterReference ) );
+				return m_AssetImporter;
 			}
 		}
 		
-		public int PropertyCount
+		internal int PropertyCount
 		{
 			get
 			{
@@ -42,13 +78,42 @@ namespace AssetTools
 				return m_ConstrainProperties == null ? 0 : m_ConstrainProperties.Count;
 			}
 		}
+		
+		public bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
+		{
+			typeFilter = null;
+			if( m_ImporterReference != null )
+			{
+				switch( GetAssetType() )
+				{
+					case AssetType.Texture:
+						typeFilter = "t:Texture";
+						break;
+					case AssetType.Model:
+						typeFilter = "t:GameObject";
+						break;
+					case AssetType.Audio:
+						typeFilter = "t:AudioClip";
+						break;
+					case AssetType.Folder:
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
 
-		public void AddProperty( string propName, bool isRealName = true )
+				ignoreAssetPaths.Add( AssetDatabase.GetAssetPath( m_ImporterReference ) );
+				return true;
+			}
+
+			return false;
+		}
+
+		private void AddProperty( string propName, bool isRealName = true )
 		{
 			if( m_HasProperties == 0 )
 				GatherProperties();
 
-			string otherName = isRealName ? GetDisplayName( propName ) : GetRealName( propName );
+			string otherName = isRealName ? GetPropertyDisplayName( propName ) : GetPropertyRealName( propName );
 
 			if( m_ConstrainProperties == null )
 				m_ConstrainProperties = new List<string>();
@@ -59,7 +124,7 @@ namespace AssetTools
 			m_ConstrainPropertiesDisplayNames.Add( isRealName ? otherName : propName );
 		}
 
-		public void RemoveProperty( string p, bool realName = true )
+		private void RemoveProperty( string p, bool realName = true )
 		{
 			if( m_HasProperties == 0 )
 				GatherProperties();
@@ -75,7 +140,7 @@ namespace AssetTools
 			}
 		}
 
-		public void RemoveProperty( int i )
+		internal void RemoveProperty( int i )
 		{
 			if( m_HasProperties == 0 )
 				GatherProperties();
@@ -84,7 +149,7 @@ namespace AssetTools
 			m_ConstrainPropertiesDisplayNames.RemoveAt( i );
 		}
 
-		public string GetDisplayName( int i )
+		internal string GetPropertyDisplayName( int i )
 		{
 			if( m_HasProperties == 0 )
 				GatherProperties();
@@ -95,7 +160,7 @@ namespace AssetTools
 			return m_ConstrainPropertiesDisplayNames[i];
 		}
 
-		public string GetDisplayName( string realName )
+		internal string GetPropertyDisplayName( string realName )
 		{
 			if( m_HasProperties == 0 )
 				GatherProperties();
@@ -111,7 +176,7 @@ namespace AssetTools
 			return string.Empty;
 		}
 
-		string GetRealName( string displayName )
+		private string GetPropertyRealName( string displayName )
 		{
 			if( m_HasProperties == 0 )
 				GatherProperties();
@@ -127,10 +192,10 @@ namespace AssetTools
 
 		internal void GatherProperties()
 		{
-			if( ImporterReference == null )
+			if( m_ImporterReference == null )
 				return;
 
-			SerializedObject so = new SerializedObject( m_Profile.GetAssetImporter() );
+			SerializedObject so = new SerializedObject( GetAssetImporter() );
 			SerializedProperty iter = so.GetIterator();
 
 			List<string> props = new List<string>();
@@ -159,7 +224,7 @@ namespace AssetTools
 		}
 		
 		
-		internal void TogglePropertySelected( object selectedObject )
+		internal void TogglePropertyIncludedInConstraints( object selectedObject )
 		{
 			string propertyName = selectedObject as string;
 			if( m_ConstrainPropertiesDisplayNames.Contains( propertyName ) )
@@ -171,11 +236,11 @@ namespace AssetTools
 		public List<IConformObject> GetConformObjects( string asset )
 		{
 			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
-			if( ImporterReference == null )
+			if( m_ImporterReference == null )
 				return new List<IConformObject>(0);
 			
 			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
-			SerializedObject profileImporterSO = new SerializedObject( ProfileAssetImporter );
+			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
 			
 			if( m_ConstrainProperties.Count == 0 )
 			{
@@ -199,7 +264,7 @@ namespace AssetTools
 			return infos;
 		}
 
-		List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
+		private List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
 		{
 			SerializedProperty ruleIter = template.GetIterator();
 			SerializedProperty assetIter = asset.GetIterator();
@@ -220,17 +285,36 @@ namespace AssetTools
 			return infos;
 		}
 		
-		internal void CopyProperties( AssetViewItem item )
+		public void FixCallback( AssetDetailList calledFromTreeView, object context )
+		{
+			// TODO find out how to multi select
+			// TODO if selection is a folder
+			
+			AssetViewItem selectedNodes = context as AssetViewItem;
+			if( selectedNodes != null )
+			{
+				CopyProperties( selectedNodes );
+				foreach( PropertyConformObject data in selectedNodes.conformData )
+				{
+					data.Conforms = true;
+				}
+				calledFromTreeView.m_PropertyList.Reload();
+			}
+			else
+				Debug.LogError( "Could not fix Asset with no Assets selected." );
+		}
+		
+		private void CopyProperties( AssetViewItem item )
 		{
 			if( m_ConstrainProperties.Count > 0 )
 			{
-				SerializedObject profileSerializedObject = new SerializedObject( ProfileAssetImporter );
+				SerializedObject profileSerializedObject = new SerializedObject( ReferenceAssetImporter );
 				SerializedObject assetImporterSO = new SerializedObject( item.AssetImporter );
 				CopyConstrainedProperties( assetImporterSO, profileSerializedObject );
 			}
 			else
 			{
-				EditorUtility.CopySerialized( ProfileAssetImporter, item.AssetImporter );
+				EditorUtility.CopySerialized( ReferenceAssetImporter, item.AssetImporter );
 			}
 
 			item.conforms = true;
@@ -247,25 +331,6 @@ namespace AssetTools
 			
 			if( ! affectedAssetImporterSO.ApplyModifiedProperties() )
 				Debug.LogError( "copy failed" );
-		}
-		
-		internal void FixCallback( AssetDetailList windowDisplay, object context )
-		{
-			// TODO find out how to multi select
-			// TODO if selection is a folder
-			
-			AssetViewItem selectedNodes = context as AssetViewItem;
-			if( selectedNodes != null )
-			{
-				CopyProperties( selectedNodes );
-				foreach( PropertyConformObject data in selectedNodes.conformData )
-				{
-					data.Conforms = true;
-				}
-				windowDisplay.m_PropertyList.Reload();
-			}
-			else
-				Debug.LogError( "Could not fix Asset with no Assets selected." );
 		}
 	}
 }

@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	internal class AssetDetailList : TreeView
+	public class AssetDetailList : TreeView
 	{
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 		
@@ -125,38 +125,19 @@ namespace AssetTools
 		List<string> GetFilteredAssets( AuditProfile profile )
 		{
 			List<string> associatedAssets = new List<string>();
-			string ignorePath = "";
-			string findFilter = "";
-			
-			if( profile.m_ImporterReference != null )
-			{
-				switch( profile.GetAssetType() )
-				{
-					case AssetType.Texture:
-						findFilter = "t:Texture";
-						break;
-					case AssetType.Model:
-						findFilter = "t:GameObject";
-						break;
-					case AssetType.Audio:
-						findFilter = "t:AudioClip";
-						break;
-					case AssetType.Folder:
-						break;
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
+			List<string> ignorePaths = new List<string>();
+			string typeFilter;
 
-				ignorePath = AssetDatabase.GetAssetPath( profile.m_ImporterReference );
-			}
+			// TODO see if there is a way to merge
+			m_Profile.m_ImporterModule.GetSearchFilter( out typeFilter, ignorePaths );
 
-			string[] guids = AssetDatabase.FindAssets( findFilter );
+			string[] guids = AssetDatabase.FindAssets( typeFilter );
 			foreach( var assetGUID in guids )
 			{
 				string assetPath = AssetDatabase.GUIDToAssetPath( assetGUID );
 				
 				// some items may appear twice, due to sub assets, e.g. Sprite
-				if( assetPath == ignorePath || associatedAssets.Contains( assetPath ) )
+				if( ignorePaths.Contains( assetPath ) || associatedAssets.Contains( assetPath ) )
 					continue;
 
 				if( Filter.Conforms( assetPath, profile.m_Filters ) )

@@ -43,7 +43,7 @@ namespace AssetTools
 			return root;
 		}
 
-		internal static void GenerateTreeElements( AssetViewItem assetItem, TreeViewItem root )
+		private static void GenerateTreeElements( AssetViewItem assetItem, TreeViewItem root )
 		{
 			string activePath = assetItem.displayName + ":";
 			PropertyViewItem propertyRoot = new PropertyViewItem( activePath.GetHashCode(), 0, activePath, true );
@@ -61,7 +61,7 @@ namespace AssetTools
 			}
 		}
 
-		internal static void AddChildProperty( string parentPath, PropertyViewItem parent, PropertyConformObject propertyConformObject, AssetViewItem assetItem, int depth, int arrayIndex = -1 )
+		private static void AddChildProperty( string parentPath, PropertyViewItem parent, PropertyConformObject propertyConformObject, AssetViewItem assetItem, int depth, int arrayIndex = -1 )
 		{
 			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
 			string activePath = parentPath + propertyConformObject.Name + extra;
@@ -71,8 +71,9 @@ namespace AssetTools
 
 			for( int i=0; i<propertyConformObject.SubObjects.Count; ++i )
 			{
+				// TODO will this be slow? , need to see if there is a better way to cache object type
 				if( propertyConformObject.SubObjects[i] is PropertyConformObject )
-					AddChildProperty( activePath, property, propertyConformObject.SubObjects[i] as PropertyConformObject, assetItem, depth+1, propertyConformObject.AssetSerializedProperty.isArray ? i : -1 );
+					AddChildProperty( activePath, property, (PropertyConformObject)propertyConformObject.SubObjects[i], assetItem, depth+1, propertyConformObject.AssetSerializedProperty.isArray ? i : -1 );
 			}
 		}
 
@@ -144,11 +145,12 @@ namespace AssetTools
 			menu.ShowAsContext();
 		}
 
-		void FixCallback( object context )
+		private static void FixCallback( object context )
 		{
 			if( context == null )
 				return;
 			
+			// TODO multu-select?
 			PropertyViewItem selectedNodes = context as PropertyViewItem;
 			Assert.IsNotNull( selectedNodes, "Context must be a PropertyViewItem" );
 			selectedNodes.CopyProperty();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace AssetTools
 {
@@ -10,6 +11,14 @@ namespace AssetTools
 	{
 		public static void Draw( ImporterPropertiesModule propertiesModule, ControlRect layout )
 		{
+			using( var check = new EditorGUI.ChangeCheckScope() )
+			{
+				// TODO use SerialisedObject and Properties???
+				propertiesModule.m_ImporterReference = EditorGUI.ObjectField( layout.Get(), "Template", propertiesModule.m_ImporterReference, typeof(UnityEngine.Object), false );
+				
+				if( check.changed )
+					propertiesModule.GatherProperties();
+			}
 			layout.Space( 10 );
 			EditorGUI.LabelField( layout.Get(), "Constrain to Properties:" );
 
@@ -21,7 +30,7 @@ namespace AssetTools
 			int removeAt = -1;
 			for( int i = 0; i < propertiesModule.PropertyCount; ++i )
 			{
-				EditorGUI.LabelField( subLayout.Get(), propertiesModule.GetDisplayName( i ) );
+				EditorGUI.LabelField( subLayout.Get(), propertiesModule.GetPropertyDisplayName( i ) );
 			}
 
 			if( removeAt >= 0 )
@@ -32,13 +41,13 @@ namespace AssetTools
 			layoutRect.width = 100;
 			if( GUI.Button( layoutRect, "Edit Selection" ) )
 			{
-				string[] props = GetPropertyNames( new SerializedObject( propertiesModule.ProfileAssetImporter ) );
+				string[] props = GetPropertyNames( new SerializedObject( propertiesModule.ReferenceAssetImporter ) );
 				GenericMenu menu = new GenericMenu();
 				foreach( string prop in props )
 				{
 					bool isPropertySelected = propertiesModule.m_ConstrainProperties.Contains( prop );
-					string disName = propertiesModule.GetDisplayName( prop );
-					menu.AddItem( new GUIContent( disName ), isPropertySelected, propertiesModule.TogglePropertySelected, disName );
+					string disName = propertiesModule.GetPropertyDisplayName( prop );
+					menu.AddItem( new GUIContent( disName ), isPropertySelected, propertiesModule.TogglePropertyIncludedInConstraints, disName );
 				}
 
 				menu.ShowAsContext();
