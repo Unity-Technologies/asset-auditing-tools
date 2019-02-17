@@ -25,12 +25,11 @@ namespace AssetTools
 		public List<string> m_ConstrainProperties = new List<string>();
 		
 
-		//[NonSerialized] 
-		public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
+		[NonSerialized] public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
 		[NonSerialized] public List<SerializedProperty> m_SerialisedProperties = new List<SerializedProperty>();
 		private int m_HasProperties = 0;
 		
-
+		internal AssetImporter m_AssetImporter;
 		
 		
 		private AssetType GetAssetType()
@@ -52,7 +51,8 @@ namespace AssetTools
 			if( a is AudioImporter )
 				return AssetType.Audio;
 			
-			throw new IndexOutOfRangeException( string.Format( "ReferenceAssetImporter {0}, not a supported Type", a.GetType().Name ) );
+			//throw new IndexOutOfRangeException( string.Format( "ReferenceAssetImporter {0}, not a supported Type", a.GetType().Name ) );
+			return AssetType.Native;
 		}
 
 		
@@ -62,7 +62,7 @@ namespace AssetTools
 			return AssetImporter.GetAtPath( AssetDatabase.GetAssetPath( m_ImporterReference ) );
 		}
 
-		private AssetImporter m_AssetImporter;
+		
 		public AssetImporter ReferenceAssetImporter
 		{
 			get
@@ -99,6 +99,8 @@ namespace AssetTools
 						typeFilter = "t:AudioClip";
 						break;
 					case AssetType.Folder:
+						break;
+					case AssetType.Native:
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();
@@ -213,6 +215,9 @@ namespace AssetTools
 			}
 
 			GatherDisplayNames();
+			
+			// TODO check if properties exist in active importer
+			
 
 			m_HasProperties = m_ConstrainProperties.Count > 0 ? 1 : -1;
 		}
@@ -240,6 +245,7 @@ namespace AssetTools
 			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
 			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
 			
+			// TODO check to make sure these are valid constraints
 			if( m_ConstrainProperties.Count == 0 )
 			{
 				return CompareSerializedObject( profileImporterSO, assetImporterSO );
@@ -250,9 +256,11 @@ namespace AssetTools
 			for( int i = 0; i < m_ConstrainProperties.Count; ++i )
 			{
 				string propertyName = m_ConstrainProperties[i];
-
-				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( propertyName );
+				
 				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( propertyName );
+				if( assetRuleSP == null )
+					continue; // could be properties from another Object
+				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( propertyName );
 
 				PropertyConformObject conformObject = new PropertyConformObject( propertyName );
 				conformObject.SetSerializedProperties( assetRuleSP, foundAssetSP );
@@ -273,10 +281,10 @@ namespace AssetTools
 
 			do
 			{
-				PropertyConformObject @object = new PropertyConformObject( ruleIter.name );
-				// TODO better way to do this?
-				@object.SetSerializedProperties( template.FindProperty( ruleIter.name ), asset.FindProperty( assetIter.name ) );
-				infos.Add( @object );
+				PropertyConformObject conformObject = new PropertyConformObject( ruleIter.name );
+				// TODO better way to do this? could use utility method to get all properties in one loop
+				conformObject.SetSerializedProperties( template.FindProperty( ruleIter.name ), asset.FindProperty( assetIter.name ) );
+				infos.Add( conformObject );
 				ruleIter.NextVisible( false );
 			} while( assetIter.NextVisible( false ) );
 

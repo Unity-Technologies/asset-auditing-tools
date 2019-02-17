@@ -1,7 +1,30 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
 
 namespace AssetTools.GUIUtility
 {
+	public static class SerializationUtilities
+	{
+		public static List<SerializedProperty> FindPropertiesInClass( SerializedProperty classProp, IList<string> targets )
+		{
+			SerializedProperty copy = classProp.Copy();
+			List<SerializedProperty> properties = new List<SerializedProperty>(targets.Count);
+			for( int i=0; i<targets.Count; ++i )
+				properties.Add( null );
+			copy.NextVisible( true );
+			do
+			{
+				for( int i = 0; i < targets.Count; ++i )
+				{
+					if( targets[i].Equals( copy.name ) )
+						properties[i] = copy.Copy();
+				}
+			} while( copy.NextVisible(  false ) );
+
+			return properties;
+		}
+	}
 
 	public class ControlRect
 	{

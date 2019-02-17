@@ -15,32 +15,13 @@ namespace AssetTools
 		private SerializedProperty m_ImporterReferenceSerializedProperty;
 		private SerializedProperty m_PropertiesArraySerializedProperty;
 		
-		private static List<SerializedProperty> FindPropertiesInClass( SerializedProperty classProp, IList<string> targets )
-		{
-			SerializedProperty copy = classProp.Copy();
-			List<SerializedProperty> properties = new List<SerializedProperty>(targets.Count);
-			for( int i=0; i<targets.Count; ++i )
-				properties.Add( null );
-			copy.NextVisible( true );
-			do
-			{
-				for( int i = 0; i < targets.Count; ++i )
-				{
-					if( targets[i].Equals( copy.name ) )
-						properties[i] = copy.Copy();
-				}
-			} while( copy.NextVisible(  false ) );
-
-			return properties;
-		}
-		
 		
 		public void Draw( SerializedProperty property, ControlRect layout )
 		{
 			if( m_ImporterReferenceSerializedProperty == null || m_PropertiesArraySerializedProperty == null )
 			{
 				List<string> propertyNames = new List<string> {"m_ImporterReference", "m_ConstrainProperties"};
-				List<SerializedProperty> properties = FindPropertiesInClass( property, propertyNames );
+				List<SerializedProperty> properties = SerializationUtilities.FindPropertiesInClass( property, propertyNames );
 				m_ImporterReferenceSerializedProperty = properties[0];
 				m_PropertiesArraySerializedProperty = properties[1];
 				if( m_ImporterReferenceSerializedProperty == null || m_PropertiesArraySerializedProperty == null )
@@ -61,8 +42,18 @@ namespace AssetTools
 				m_Module = profile.m_ImporterModule;
 			}
 
-			if( m_ImporterReferenceSerializedProperty != null && EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Template" ) ) )
-			 	m_Module.GatherProperties();
+			if( m_ImporterReferenceSerializedProperty != null )
+			{
+				using( var check = new EditorGUI.ChangeCheckScope() )
+				{
+					EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Importer Template" ) );
+					if( check.changed )
+					{
+						m_Module.m_AssetImporter = null;
+						m_Module.GatherProperties();
+					}
+				}
+			}
 			
 			if( m_ImporterReferenceSerializedProperty.objectReferenceValue != null )
 				ConstrainToPropertiesArea( layout );

@@ -11,6 +11,7 @@ namespace AssetTools
 		Model,
 		Audio,
 		Folder,
+		Native,
 		NA
 	}
 	
