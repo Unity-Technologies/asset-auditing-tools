@@ -76,8 +76,6 @@ namespace AssetTools
 				return true;
 
 			FileInfo fi = new FileInfo( importer.assetPath );
-			if( fi == null )
-				Debug.Log( "FI NULL " + importer.assetPath );
 			DirectoryInfo di = new DirectoryInfo( importer.assetPath );
 			
 			Assert.IsTrue( fi.Exists || di.Exists );

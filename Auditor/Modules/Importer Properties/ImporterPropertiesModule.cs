@@ -15,18 +15,22 @@ namespace AssetTools
 	[System.Serializable]
 	public class ImporterPropertiesModule : IImportProcessModule
 	{
-		public List<string> m_ConstrainProperties = new List<string>();
-
-		[NonSerialized] public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
-		[NonSerialized] public List<SerializedProperty> m_SerialisedProperties = new List<SerializedProperty>();
-		private int m_HasProperties = 0;
-		
 		public UnityEngine.Object m_ImporterReference = null;
 		
 #if UNITY_2018_1_OR_NEWER
 		// TODO on 2018 allow for the use of a Preset instead of an Object reference
 		public Preset m_Preset;
 #endif
+		
+		public List<string> m_ConstrainProperties = new List<string>();
+		
+
+		//[NonSerialized] 
+		public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
+		[NonSerialized] public List<SerializedProperty> m_SerialisedProperties = new List<SerializedProperty>();
+		private int m_HasProperties = 0;
+		
+
 		
 		
 		private AssetType GetAssetType()
@@ -73,8 +77,7 @@ namespace AssetTools
 		{
 			get
 			{
-				if( m_HasProperties == 0 )
-					GatherProperties();
+				GatherPropertiesIfNeeded();
 				return m_ConstrainProperties == null ? 0 : m_ConstrainProperties.Count;
 			}
 		}
@@ -108,10 +111,9 @@ namespace AssetTools
 			return false;
 		}
 
-		private void AddProperty( string propName, bool isRealName = true )
+		internal void AddProperty( string propName, bool isRealName = true )
 		{
-			if( m_HasProperties == 0 )
-				GatherProperties();
+			GatherPropertiesIfNeeded();
 
 			string otherName = isRealName ? GetPropertyDisplayName( propName ) : GetPropertyRealName( propName );
 
@@ -126,8 +128,7 @@ namespace AssetTools
 
 		private void RemoveProperty( string p, bool realName = true )
 		{
-			if( m_HasProperties == 0 )
-				GatherProperties();
+			GatherPropertiesIfNeeded();
 
 			List<string> list = realName ? m_ConstrainProperties : m_ConstrainPropertiesDisplayNames;
 			for( int i = 0; i < list.Count; ++i )
@@ -142,8 +143,7 @@ namespace AssetTools
 
 		internal void RemoveProperty( int i )
 		{
-			if( m_HasProperties == 0 )
-				GatherProperties();
+			GatherPropertiesIfNeeded();
 
 			m_ConstrainProperties.RemoveAt( i );
 			m_ConstrainPropertiesDisplayNames.RemoveAt( i );
@@ -151,19 +151,14 @@ namespace AssetTools
 
 		internal string GetPropertyDisplayName( int i )
 		{
-			if( m_HasProperties == 0 )
-				GatherProperties();
-
-			if( m_ConstrainProperties.Count != m_ConstrainPropertiesDisplayNames.Count )
-				Debug.LogError( "DisplayName and PropertyName count's do not match" );
+			GatherPropertiesIfNeeded();
 
 			return m_ConstrainPropertiesDisplayNames[i];
 		}
 
 		internal string GetPropertyDisplayName( string realName )
 		{
-			if( m_HasProperties == 0 )
-				GatherProperties();
+			GatherPropertiesIfNeeded();
 
 			foreach( SerializedProperty property in m_SerialisedProperties )
 			{
@@ -176,10 +171,9 @@ namespace AssetTools
 			return string.Empty;
 		}
 
-		private string GetPropertyRealName( string displayName )
+		internal string GetPropertyRealName( string displayName )
 		{
-			if( m_HasProperties == 0 )
-				GatherProperties();
+			GatherPropertiesIfNeeded();
 
 			foreach( SerializedProperty property in m_SerialisedProperties )
 			{
@@ -190,6 +184,11 @@ namespace AssetTools
 			return string.Empty;
 		}
 
+		internal void GatherPropertiesIfNeeded()
+		{
+			if( m_HasProperties == 0 || m_ConstrainProperties.Count != m_ConstrainPropertiesDisplayNames.Count )
+				GatherProperties();
+		}
 		internal void GatherProperties()
 		{
 			if( m_ImporterReference == null )
@@ -213,24 +212,23 @@ namespace AssetTools
 				m_SerialisedProperties.Add( so.FindProperty( s ) );
 			}
 
-			m_ConstrainPropertiesDisplayNames.Clear();
-			foreach( SerializedProperty property in m_SerialisedProperties )
-			{
-				if( m_ConstrainProperties.Contains( property.name ) )
-					m_ConstrainPropertiesDisplayNames.Add( property.displayName );
-			}
+			GatherDisplayNames();
 
 			m_HasProperties = m_ConstrainProperties.Count > 0 ? 1 : -1;
 		}
-		
-		
-		internal void TogglePropertyIncludedInConstraints( object selectedObject )
+
+		internal void GatherDisplayNames()
 		{
-			string propertyName = selectedObject as string;
-			if( m_ConstrainPropertiesDisplayNames.Contains( propertyName ) )
-				RemoveProperty( propertyName, false );
-			else
-				AddProperty( propertyName, false );
+			m_ConstrainPropertiesDisplayNames.Clear();
+			for( int i=0; i<m_ConstrainProperties.Count; ++i )
+				m_ConstrainPropertiesDisplayNames.Add( null );
+			
+			foreach( SerializedProperty property in m_SerialisedProperties )
+			{
+				int i = m_ConstrainProperties.IndexOf( property.name );
+				if( i >= 0 )
+					m_ConstrainPropertiesDisplayNames[i] = property.displayName;
+			}
 		}
 		
 		public List<IConformObject> GetConformObjects( string asset )
@@ -294,7 +292,7 @@ namespace AssetTools
 			if( selectedNodes != null )
 			{
 				CopyProperties( selectedNodes );
-				foreach( PropertyConformObject data in selectedNodes.conformData )
+				foreach( IConformObject data in selectedNodes.conformData )
 				{
 					data.Conforms = true;
 				}

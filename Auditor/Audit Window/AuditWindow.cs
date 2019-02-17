@@ -72,11 +72,11 @@ namespace AssetTools
 			}
 		}
 
-		void RefreshData()
+		private void RefreshData()
 		{
 			profiles = new List<AuditProfile>();
 			profileNames = new List<string>();
-			GetAuditorProfiles( profiles, profileNames );
+			GetAuditorProfiles( );
 			
 			if( m_AssetListState == null )
 				m_AssetListState = new TreeViewState();
@@ -105,7 +105,7 @@ namespace AssetTools
 			}
 		}
 		
-		void GetAuditorProfiles( List<AuditProfile> profiles, List<string> profileNames )
+		void GetAuditorProfiles(  )
 		{
 			string[] auditorProfileGUIDs = AssetDatabase.FindAssets( "t:AuditProfile" );
 

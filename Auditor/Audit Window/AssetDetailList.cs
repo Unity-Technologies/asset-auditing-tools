@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
@@ -22,8 +21,10 @@ namespace AssetTools
 
 		protected override TreeViewItem BuildRoot()
 		{
-			var root = new TreeViewItem( -1, -1 );
-			root.children = new List<TreeViewItem>();
+			TreeViewItem root = new TreeViewItem( -1, -1 )
+			{
+				children = new List<TreeViewItem>()
+			};
 
 			if( m_Profile != null )
 				GenerateTreeElements( m_Profile, root );
@@ -32,7 +33,7 @@ namespace AssetTools
 			return root;
 		}
 
-		void GenerateTreeElements( AuditProfile profile, TreeViewItem root )
+		private void GenerateTreeElements( AuditProfile profile, TreeViewItem root )
 		{
 			List<string> associatedAssets = GetFilteredAssets( profile );
 
@@ -49,9 +50,11 @@ namespace AssetTools
 				assetsFolder.children = new List<TreeViewItem>();
 			root.AddChild( assetsFolder );
 
-			Dictionary<int, AssetViewItem> items = new Dictionary<int, AssetViewItem>();
-			items.Add( activePath.GetHashCode(), assetsFolder );
-			
+			Dictionary<int, AssetViewItem> items = new Dictionary<int, AssetViewItem>
+			{
+				{activePath.GetHashCode(), assetsFolder}
+			};
+
 			foreach( var assetPath in associatedAssets )
 			{
 				// split the path to generate folder structure
@@ -76,8 +79,8 @@ namespace AssetTools
 				if( !result && assetsFolder.conforms )
 					assetsFolder.conforms = false;
 				
-				AssetImporter assetimporter = AssetImporter.GetAtPath( assetPath );
-				SerializedObject assetImporterSO = new SerializedObject( assetimporter );
+				AssetImporter assetImporter = AssetImporter.GetAtPath( assetPath );
+				SerializedObject assetImporterSO = new SerializedObject( assetImporter );
 
 				// the first entries have lower depth
 				for( int i = 0; i < strings.Length; i++ )
@@ -87,12 +90,14 @@ namespace AssetTools
 
 					if( i == strings.Length - 1 )
 					{
-						AssetViewItem item = new AssetViewItem( id, i + 1, strings[i], result );
-						item.icon = AssetDatabase.GetCachedIcon( assetPath ) as Texture2D;
-						item.path = activePath;
-						item.conformData = conformData;
-						item.assetObject = assetImporterSO;
-						item.isAsset = true;
+						AssetViewItem item = new AssetViewItem( id, i + 1, strings[i], result )
+						{
+							icon = AssetDatabase.GetCachedIcon( assetPath ) as Texture2D,
+							path = activePath,
+							conformData = conformData,
+							assetObject = assetImporterSO,
+							isAsset = true
+						};
 						active.AddChild( item );
 						active = item;
 						if( items.ContainsKey( id ))
@@ -101,12 +106,14 @@ namespace AssetTools
 					}
 					else
 					{
-						AssetViewItem item = null;
+						AssetViewItem item;
 						if( !items.TryGetValue( id, out item ) )
 						{
-							item = new AssetViewItem( id, i + 1, strings[i], result );
-							item.path = activePath;
-							item.icon = AssetDatabase.GetCachedIcon( activePath ) as Texture2D;
+							item = new AssetViewItem( id, i + 1, strings[i], result )
+							{
+								path = activePath,
+								icon = AssetDatabase.GetCachedIcon( activePath ) as Texture2D
+							};
 							active.AddChild( item );
 							items.Add( id, item );
 						}
@@ -121,8 +128,8 @@ namespace AssetTools
 				}
 			}
 		}
-		
-		List<string> GetFilteredAssets( AuditProfile profile )
+
+		private List<string> GetFilteredAssets( AuditProfile profile )
 		{
 			List<string> associatedAssets = new List<string>();
 			List<string> ignorePaths = new List<string>();
@@ -131,8 +138,8 @@ namespace AssetTools
 			// TODO see if there is a way to merge
 			m_Profile.m_ImporterModule.GetSearchFilter( out typeFilter, ignorePaths );
 
-			string[] guids = AssetDatabase.FindAssets( typeFilter );
-			foreach( var assetGUID in guids )
+			string[] GUIDs = AssetDatabase.FindAssets( typeFilter );
+			foreach( var assetGUID in GUIDs )
 			{
 				string assetPath = AssetDatabase.GUIDToAssetPath( assetGUID );
 				
@@ -152,7 +159,7 @@ namespace AssetTools
 			AssetViewItem item = args.item as AssetViewItem;
 			if( item != null )
 			{
-				float num = this.GetContentIndent( item ) + this.extraSpaceBeforeIconAndLabel;
+				float num = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
 
 				Rect r = args.rowRect;
 				if( args.item.icon != null )
@@ -195,7 +202,7 @@ namespace AssetTools
 
 			for( int i = 0; i < selectedIds.Count; ++i )
 			{
-				AssetViewItem item = this.FindItem( selectedIds[i], rootItem ) as AssetViewItem;
+				AssetViewItem item = FindItem( selectedIds[i], rootItem ) as AssetViewItem;
 				if( item != null )
 				{
 					m_SelectedItems.Add( item );
@@ -204,24 +211,16 @@ namespace AssetTools
 			
 			m_PropertyList.SetSelection( m_SelectedItems );
 		}
-
+		
 		protected override void DoubleClickedItem( int id )
 		{
 			base.DoubleClickedItem( id );
-			TreeViewItem item = this.FindItem( id, rootItem );
-			if( item != null )
-			{
-				AssetViewItem pathItem = item as AssetViewItem;
-				if( pathItem != null )
-				{
-					UnityEngine.Object o = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>( pathItem.path );
-					if( o != null )
-					{
-						Selection.activeObject = o;
-						EditorGUIUtility.PingObject( o );
-					}
-				}
-			}
+			AssetViewItem pathItem = FindItem( id, rootItem ) as AssetViewItem;
+			if( pathItem == null )
+				return;
+			
+			Selection.activeObject = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>( pathItem.path );
+			EditorGUIUtility.PingObject( Selection.activeObject );
 		}
 
 		protected override void ContextClickedItem( int id )
@@ -239,12 +238,12 @@ namespace AssetTools
 			menu.ShowAsContext();
 		}
 
-		void FixCallbackAll( object context )
+		private void FixCallbackAll( object context )
 		{
 			FixCallbackImporterProperties( context );
 		}
 
-		void FixCallbackImporterProperties( object context )
+		private void FixCallbackImporterProperties( object context )
 		{
 			if( m_Profile.m_ImporterModule != null )
 				m_Profile.m_ImporterModule.FixCallback( this, context );

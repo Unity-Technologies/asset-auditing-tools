@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
@@ -7,56 +6,134 @@ using UnityEngine.Assertions;
 
 namespace AssetTools
 {
-	public static class ImporterPropertiesModuleInspector
+	public class ImporterPropertiesModuleInspector
 	{
-		public static void Draw( ImporterPropertiesModule propertiesModule, ControlRect layout )
+		// TODO constructor to setup
+		
+		private ImporterPropertiesModule m_Module;
+		
+		private SerializedProperty m_ImporterReferenceSerializedProperty;
+		private SerializedProperty m_PropertiesArraySerializedProperty;
+		
+		private static List<SerializedProperty> FindPropertiesInClass( SerializedProperty classProp, IList<string> targets )
 		{
-			using( var check = new EditorGUI.ChangeCheckScope() )
+			SerializedProperty copy = classProp.Copy();
+			List<SerializedProperty> properties = new List<SerializedProperty>(targets.Count);
+			for( int i=0; i<targets.Count; ++i )
+				properties.Add( null );
+			copy.NextVisible( true );
+			do
 			{
-				// TODO use SerialisedObject and Properties???
-				propertiesModule.m_ImporterReference = EditorGUI.ObjectField( layout.Get(), "Template", propertiesModule.m_ImporterReference, typeof(UnityEngine.Object), false );
-				
-				if( check.changed )
-					propertiesModule.GatherProperties();
+				for( int i = 0; i < targets.Count; ++i )
+				{
+					if( targets[i].Equals( copy.name ) )
+						properties[i] = copy.Copy();
+				}
+			} while( copy.NextVisible(  false ) );
+
+			return properties;
+		}
+		
+		
+		public void Draw( SerializedProperty property, ControlRect layout )
+		{
+			if( m_ImporterReferenceSerializedProperty == null || m_PropertiesArraySerializedProperty == null )
+			{
+				List<string> propertyNames = new List<string> {"m_ImporterReference", "m_ConstrainProperties"};
+				List<SerializedProperty> properties = FindPropertiesInClass( property, propertyNames );
+				m_ImporterReferenceSerializedProperty = properties[0];
+				m_PropertiesArraySerializedProperty = properties[1];
+				if( m_ImporterReferenceSerializedProperty == null || m_PropertiesArraySerializedProperty == null )
+				{
+					Debug.LogError( "Invalid properties for ImporterPropertiesModule" );
+					return;
+				}
 			}
+			
+			if( m_Module == null )
+			{
+				AuditProfile profile = property.serializedObject.targetObject as AuditProfile;
+				if( profile == null )
+				{
+					Debug.LogError( "ImporterPropertiesModule must be apart of a profile Object" );
+					return;
+				}
+				m_Module = profile.m_ImporterModule;
+			}
+
+			if( m_ImporterReferenceSerializedProperty != null && EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Template" ) ) )
+			 	m_Module.GatherProperties();
+			
+			if( m_ImporterReferenceSerializedProperty.objectReferenceValue != null )
+				ConstrainToPropertiesArea( layout );
+			else
+			{
+				Rect r = layout.Get( 25 );
+				EditorGUI.HelpBox( r, "No template Object to constrain properties on.", MessageType.Warning );
+			}
+		}
+		
+		private void ConstrainToPropertiesArea( ControlRect layout )
+		{
 			layout.Space( 10 );
 			EditorGUI.LabelField( layout.Get(), "Constrain to Properties:" );
 
-			Rect boxAreaRect = layout.Get( Mathf.Max( (propertiesModule.PropertyCount * layout.layoutHeight) + 6, 20 ) );
+			Rect boxAreaRect = layout.Get( Mathf.Max( (m_Module.PropertyCount * layout.layoutHeight) + 6, 20 ) );
 			GUI.Box( boxAreaRect, GUIContent.none );
 
-			ControlRect subLayout = new ControlRect( boxAreaRect.x + 3, boxAreaRect.y + 3, boxAreaRect.width - 6, layout.layoutHeight );
-			subLayout.padding = 0;
-			int removeAt = -1;
-			for( int i = 0; i < propertiesModule.PropertyCount; ++i )
+			ControlRect subLayout = new ControlRect( boxAreaRect.x + 3, boxAreaRect.y + 3, boxAreaRect.width - 6, layout.layoutHeight )
 			{
-				EditorGUI.LabelField( subLayout.Get(), propertiesModule.GetPropertyDisplayName( i ) );
+				padding = 0
+			};
+			
+			// list all of the displayNames
+			for( int i = 0; i < m_Module.PropertyCount; ++i )
+			{
+				EditorGUI.LabelField( subLayout.Get(), m_Module.GetPropertyDisplayName( i ) );
 			}
-
-			if( removeAt >= 0 )
-				propertiesModule.RemoveProperty( removeAt );
 
 			Rect layoutRect = layout.Get();
 			layoutRect.x = layoutRect.x + (layoutRect.width - 100);
 			layoutRect.width = 100;
 			if( GUI.Button( layoutRect, "Edit Selection" ) )
 			{
-				string[] props = GetPropertyNames( new SerializedObject( propertiesModule.ReferenceAssetImporter ) );
+				string[] propertyNamesForReference = GetPropertyNames( new SerializedObject( m_Module.ReferenceAssetImporter ) );
+				
+				m_Module.GatherPropertiesIfNeeded();
 				GenericMenu menu = new GenericMenu();
-				foreach( string prop in props )
+				foreach( string propertyName in propertyNamesForReference )
 				{
-					bool isPropertySelected = propertiesModule.m_ConstrainProperties.Contains( prop );
-					string disName = propertiesModule.GetPropertyDisplayName( prop );
-					menu.AddItem( new GUIContent( disName ), isPropertySelected, propertiesModule.TogglePropertyIncludedInConstraints, disName );
+					bool isPropertySelected = m_Module.m_ConstrainProperties.Contains( propertyName );
+					string propertyDisplayName = m_Module.GetPropertyDisplayName( propertyName );
+					menu.AddItem( new GUIContent( propertyDisplayName ), isPropertySelected, TogglePropertyConstraintSelected, propertyDisplayName );
 				}
-
+				
 				menu.ShowAsContext();
 			}
 		}
-		
-		static string[] GetPropertyNames(SerializedObject so)
+
+		private void TogglePropertyConstraintSelected( object selectedObject )
 		{
-			SerializedProperty soIter = so.GetIterator();
+			string propertyName = selectedObject as string;
+			Assert.IsNotNull( propertyName );
+
+			for( int i = 0; i < m_Module.m_ConstrainPropertiesDisplayNames.Count; ++i )
+			{
+				if( m_Module.m_ConstrainPropertiesDisplayNames[i].Equals( propertyName ) )
+				{
+					m_PropertiesArraySerializedProperty.DeleteArrayElementAtIndex( i );
+					return;
+				}
+			}
+			
+			m_PropertiesArraySerializedProperty.arraySize += 1;
+			m_PropertiesArraySerializedProperty.GetArrayElementAtIndex( m_PropertiesArraySerializedProperty.arraySize-1 ).stringValue = m_Module.GetPropertyRealName( propertyName ) ;
+			m_Module.GatherDisplayNames();
+		}
+
+		private static string[] GetPropertyNames( SerializedObject serializedObject )
+		{
+			SerializedProperty soIter = serializedObject.GetIterator();
 
 			List<string> propNames = new List<string>();
 

@@ -5,13 +5,13 @@ namespace AssetTools.GUIUtility
 
 	public class ControlRect
 	{
-		private float x = 0;
-		private float width = 0;
+		private readonly float x = 0;
+		private readonly float width = 0;
 
 		private float currentY = 0;
 		private Rect lastRect = Rect.zero;
 
-		public float layoutHeight = 16;
+		public readonly float layoutHeight = 16;
 		public float padding = 3;
 
 		public Rect LastRect

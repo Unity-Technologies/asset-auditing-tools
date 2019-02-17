@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using NUnit.Framework;
-using NUnit.Framework.Constraints;
+﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -12,7 +8,7 @@ namespace AssetTools
 {
 	internal class PropertyDetailList : TreeView
 	{
-		private static Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
+		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 
 		private List<AssetViewItem> selectedItems;
 		
@@ -34,8 +30,10 @@ namespace AssetTools
 
 		protected override TreeViewItem BuildRoot()
 		{
-			var root = new TreeViewItem( -1, -1 );
-			root.children = new List<TreeViewItem>();
+			var root = new TreeViewItem( -1, -1 )
+			{
+				children = new List<TreeViewItem>()
+			};
 
 			// TODO need to display multiple selection (include folders in that)
 			if( selectedItems != null && selectedItems.Count > 0 && selectedItems[0].isAsset )
@@ -46,8 +44,10 @@ namespace AssetTools
 		private static void GenerateTreeElements( AssetViewItem assetItem, TreeViewItem root )
 		{
 			string activePath = assetItem.displayName + ":";
-			PropertyViewItem propertyRoot = new PropertyViewItem( activePath.GetHashCode(), 0, activePath, true );
-			propertyRoot.icon = assetItem.icon;
+			PropertyViewItem propertyRoot = new PropertyViewItem( activePath.GetHashCode(), 0, activePath, true )
+			{
+				icon = assetItem.icon
+			};
 			if( propertyRoot.children == null )
 				propertyRoot.children = new List<TreeViewItem>();
 			root.AddChild( propertyRoot );
@@ -57,7 +57,7 @@ namespace AssetTools
 			{
 				// Add all ConformObject's that are properties
 				if( data[i] is PropertyConformObject )
-					AddChildProperty( activePath, propertyRoot, data[i] as PropertyConformObject, assetItem, 1 );
+					AddChildProperty( activePath, propertyRoot, (PropertyConformObject)data[i], assetItem, 1 );
 			}
 		}
 
@@ -65,8 +65,10 @@ namespace AssetTools
 		{
 			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
 			string activePath = parentPath + propertyConformObject.Name + extra;
-			PropertyViewItem property = new PropertyViewItem( activePath, depth, propertyConformObject );
-			property.assetViewItem = assetItem;
+			PropertyViewItem property = new PropertyViewItem( activePath, depth, propertyConformObject )
+			{
+				assetViewItem = assetItem
+			};
 			parent.AddChild( property );
 
 			for( int i=0; i<propertyConformObject.SubObjects.Count; ++i )
@@ -126,6 +128,7 @@ namespace AssetTools
 		protected override void ContextClickedItem( int id )
 		{
 			PropertyViewItem item = FindItem( id, rootItem ) as PropertyViewItem;
+			Assert.IsNotNull( item );
 			if( item.conforms )
 				return;
 			
@@ -150,7 +153,7 @@ namespace AssetTools
 			if( context == null )
 				return;
 			
-			// TODO multu-select?
+			// TODO multi-select?
 			PropertyViewItem selectedNodes = context as PropertyViewItem;
 			Assert.IsNotNull( selectedNodes, "Context must be a PropertyViewItem" );
 			selectedNodes.CopyProperty();
