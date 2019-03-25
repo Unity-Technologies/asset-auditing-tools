@@ -8,7 +8,7 @@ namespace AssetTools
 {
 	public class ImporterPropertiesModuleInspector
 	{
-		// TODO constructor to setup
+		// TODO constructor to setup << why did I add this?
 		
 		private ImporterPropertiesModule m_Module;
 		
@@ -94,6 +94,11 @@ namespace AssetTools
 				GenericMenu menu = new GenericMenu();
 				foreach( string propertyName in propertyNamesForReference )
 				{
+					// we do not want UserData to be included. We are required to use this in order to save information about
+					// how the Asset is imported, to generate a different hash for the cache server
+					if( propertyName.Contains( "m_UserData" ) )
+						continue;
+					
 					bool isPropertySelected = m_Module.m_ConstrainProperties.Contains( propertyName );
 					string propertyDisplayName = m_Module.GetPropertyDisplayName( propertyName );
 					menu.AddItem( new GUIContent( propertyDisplayName ), isPropertySelected, TogglePropertyConstraintSelected, propertyDisplayName );

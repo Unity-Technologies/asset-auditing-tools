@@ -32,6 +32,8 @@ namespace AssetTools
 			conforms = assetConforms;
 		}
 
+		// This is done after setting manually. But if running through the modules during import pipeline. Then perhaps simply reimport and let it handle it.
+		// if manually done (window view) then add to a list of force runOnImport and reset at PostProcessAllAssets  
 		public void ReimportAsset()
 		{
 			if( !isAsset )

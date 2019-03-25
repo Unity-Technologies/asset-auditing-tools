@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8654e54c95b414173aedf473b71604e8
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: '"ImportDefinitionFiles": {"ImportDefinitionFiles": { {"assetProcessedWith":[{"importDefintionPath":"Assets/asset-auditing-tools/Auditor/MetaData/AssetPostprocessorUserDataSerialisation.cs0","moduleName":"PreprocessorModule","assemblyName":"blah
+    blah vhfs.dshh v4592","methodName":"methodName","version":2},{"importDefintionPath":"Assets/asset-auditing-tools/Auditor/MetaData/AssetPostprocessorUserDataSerialisation.cs1","moduleName":"PreprocessorModule","assemblyName":"blah
+    blah vhfs.dshh v4592","methodName":"methodName","version":2},{"importDefintionPath":"Assets/asset-auditing-tools/Auditor/MetaData/AssetPostprocessorUserDataSerialisation.cs2","moduleName":"PreprocessorModule","assemblyName":"blah
+    blah vhfs.dshh v4592","methodName":"methodName","version":2}]} }'
+  assetBundleName: 
+  assetBundleVariant: 

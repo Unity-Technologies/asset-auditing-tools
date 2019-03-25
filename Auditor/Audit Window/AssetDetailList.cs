@@ -135,7 +135,7 @@ namespace AssetTools
 			List<string> ignorePaths = new List<string>();
 			string typeFilter;
 
-			// TODO see if there is a way to merge
+			// TODO see if there is a way to merge multiple modules? or have to do multiple passes?
 			m_Profile.m_ImporterModule.GetSearchFilter( out typeFilter, ignorePaths );
 
 			string[] GUIDs = AssetDatabase.FindAssets( typeFilter );
@@ -234,7 +234,7 @@ namespace AssetTools
 			
 			// TODO get list of possible selections from modules
 			
-			menu.AddItem( new GUIContent( "Conform to Template Properties" ), false, FixCallbackImporterProperties, item );
+			menu.AddItem( new GUIContent( "Conform to Importer Template Properties" ), false, FixCallbackImporterProperties, item );
 			menu.ShowAsContext();
 		}
 

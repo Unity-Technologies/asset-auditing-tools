@@ -12,7 +12,7 @@ namespace AssetTools
 		private AssetDetailList m_AssetList;
 
 		private TreeViewState m_PropertyListState;
-		internal PropertyDetailList m_PropertyList;
+		private PropertyDetailList m_PropertyList;
 		
 		private List<AuditProfile> profiles;
 		private List<string> profileNames;
@@ -234,7 +234,7 @@ namespace AssetTools
 	
 	internal static class SearchField
 	{
-		static class Styles
+		private static class Styles
 		{
 			public static readonly GUIStyle searchField = "SearchTextField";
 			public static readonly GUIStyle searchFieldCancelButton = "SearchCancelButton";

@@ -6,12 +6,6 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	/// <summary>
-	/// TODO test this
-	/// will this work for just any SerialisedObject, like ScriptableObject??
-	/// SerialisedPropertiesModule
-	/// </summary>
-	
 	[System.Serializable]
 	public class ImporterPropertiesModule : IImportProcessModule
 	{
@@ -30,6 +24,14 @@ namespace AssetTools
 		private int m_HasProperties = 0;
 		
 		internal AssetImporter m_AssetImporter;
+		
+		private List<string> m_AssetsToForceApply = new List<string>();
+		public bool DoesProcess( AssetImporter item )
+		{
+			if( m_AssetsToForceApply.Contains( item.assetPath ) )
+				return true;
+			return false;
+		}
 		
 		
 		private AssetType GetAssetType()
@@ -143,7 +145,7 @@ namespace AssetTools
 			}
 		}
 
-		internal void RemoveProperty( int i )
+		private void RemoveProperty( int i )
 		{
 			GatherPropertiesIfNeeded();
 
@@ -216,7 +218,7 @@ namespace AssetTools
 
 			GatherDisplayNames();
 			
-			// TODO check if properties exist in active importer
+			// TODO check if properties exist in active m_Importer
 			
 
 			m_HasProperties = m_ConstrainProperties.Count > 0 ? 1 : -1;
@@ -245,7 +247,7 @@ namespace AssetTools
 			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
 			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
 			
-			// TODO check to make sure these are valid constraints
+			// TODO if there are any. check to make sure these are valid constraints, if not, don't include them in the count 
 			if( m_ConstrainProperties.Count == 0 )
 			{
 				return CompareSerializedObject( profileImporterSO, assetImporterSO );
@@ -255,14 +257,12 @@ namespace AssetTools
 			
 			for( int i = 0; i < m_ConstrainProperties.Count; ++i )
 			{
-				string propertyName = m_ConstrainProperties[i];
-				
-				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( propertyName );
+				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( m_ConstrainProperties[i] );
 				if( assetRuleSP == null )
 					continue; // could be properties from another Object
-				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( propertyName );
+				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( m_ConstrainProperties[i] );
 
-				PropertyConformObject conformObject = new PropertyConformObject( propertyName );
+				PropertyConformObject conformObject = new PropertyConformObject( m_ConstrainProperties[i] );
 				conformObject.SetSerializedProperties( assetRuleSP, foundAssetSP );
 				infos.Add( conformObject );
 			}
@@ -272,20 +272,27 @@ namespace AssetTools
 
 		private List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
 		{
-			SerializedProperty ruleIter = template.GetIterator();
+			SerializedProperty templateIter = template.GetIterator();
 			SerializedProperty assetIter = asset.GetIterator();
 			assetIter.NextVisible( true );
-			ruleIter.NextVisible( true );
+			templateIter.NextVisible( true );
 			
 			List<IConformObject> infos = new List<IConformObject>();
 
 			do
 			{
-				PropertyConformObject conformObject = new PropertyConformObject( ruleIter.name );
-				// TODO better way to do this? could use utility method to get all properties in one loop
-				conformObject.SetSerializedProperties( template.FindProperty( ruleIter.name ), asset.FindProperty( assetIter.name ) );
+				if( assetIter.name == "m_UserData" )
+				{
+					templateIter.NextVisible( false );
+					continue;
+				}
+				
+				// TODO better way to do this? could use utility method to get all properties in one loop?? (this may not work, NextVisible will not work this way)
+				PropertyConformObject conformObject = new PropertyConformObject( templateIter.name );
+				conformObject.SetSerializedProperties( template.FindProperty( templateIter.name ), asset.FindProperty( assetIter.name ) );
 				infos.Add( conformObject );
-				ruleIter.NextVisible( false );
+				
+				templateIter.NextVisible( false );
 			} while( assetIter.NextVisible( false ) );
 
 			return infos;
@@ -299,32 +306,56 @@ namespace AssetTools
 			AssetViewItem selectedNodes = context as AssetViewItem;
 			if( selectedNodes != null )
 			{
-				CopyProperties( selectedNodes );
+				// forceable reimport the asset telling it to be force to be included within this module
+				m_AssetsToForceApply.Add( selectedNodes.path );
+				selectedNodes.ReimportAsset();
+				
+				// if( Apply( selectedNodes.AssetImporter ) )
+				// {
+				// 	selectedNodes.ReimportAsset();
+				// }
+				
 				foreach( IConformObject data in selectedNodes.conformData )
 				{
-					data.Conforms = true;
+					if( data is PropertyConformObject )
+						data.Conforms = true;
 				}
+				
+				selectedNodes.conforms = true;
+				for( int i = 0; i < selectedNodes.conformData.Count; ++i )
+				{
+					if( selectedNodes.conformData[i].Conforms == false )
+					{
+						selectedNodes.conforms = false;
+						break;
+					}
+				}
+				
 				calledFromTreeView.m_PropertyList.Reload();
 			}
 			else
 				Debug.LogError( "Could not fix Asset with no Assets selected." );
 		}
 		
-		private void CopyProperties( AssetViewItem item )
+		
+		public bool Apply( AssetImporter item )
 		{
 			if( m_ConstrainProperties.Count > 0 )
 			{
 				SerializedObject profileSerializedObject = new SerializedObject( ReferenceAssetImporter );
-				SerializedObject assetImporterSO = new SerializedObject( item.AssetImporter );
+				SerializedObject assetImporterSO = new SerializedObject( item );
 				CopyConstrainedProperties( assetImporterSO, profileSerializedObject );
 			}
 			else
 			{
-				EditorUtility.CopySerialized( ReferenceAssetImporter, item.AssetImporter );
+				// we need to maintain userData in order to have cache hash valid for selective Postprocessing features
+				string ud = item.userData;
+				EditorUtility.CopySerialized( ReferenceAssetImporter, item );
+				item.userData = ud;
 			}
 
-			item.conforms = true;
-			item.ReimportAsset();
+			m_AssetsToForceApply.Remove( item.assetPath );
+			return true;
 		}
 		
 		private void CopyConstrainedProperties( SerializedObject affectedAssetImporterSO, SerializedObject templateImporterSO )

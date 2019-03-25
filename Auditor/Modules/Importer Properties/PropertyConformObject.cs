@@ -114,7 +114,8 @@ namespace AssetTools
 				case SerializedPropertyType.Color:
 					return property.colorValue.ToString();
 				case SerializedPropertyType.ObjectReference:
-					return "Object"; // TODO this is weird on models imports and needs a solution as the exposed transforms reference the model itself
+					// TODO this is weird on models imports and needs a solution as the exposed transforms reference the model itself
+					return "Object";
 				case SerializedPropertyType.LayerMask:
 					break;
 				case SerializedPropertyType.Enum:

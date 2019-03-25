@@ -22,8 +22,9 @@ namespace AssetTools
 			Extension,
 			AssetBundle,
 			FileSize,
-			Labels
-			// TODO investigate more using post processing, Texture width etc. This will require multiple imports which can result in slow import times
+			Labels // Labels are a bad use-case if doing Preprocessors - They cannot be obtained. It is possible to read the meta file. But if it is not Text based or formatting changes it could run into trouble
+			// TODO investigate more using post processing, etc.
+			// TODO Can get original Texture width/height via reflection, test if can get it during preimport
 		}
 
 		public enum Condition
@@ -64,7 +65,7 @@ namespace AssetTools
 			AssetImporter importerForPath = AssetImporter.GetAtPath( path );
 			if( importerForPath == null )
 			{
-				Debug.LogError( "Could not find importer for " + path );
+				Debug.LogError( "Could not find m_Importer for " + path );
 				return false;
 			}
 			return Conforms( importerForPath, filters );
