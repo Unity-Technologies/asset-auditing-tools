@@ -17,7 +17,6 @@ namespace AssetTools
 #endif
 		
 		public List<string> m_ConstrainProperties = new List<string>();
-		
 
 		[NonSerialized] public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
 		[NonSerialized] public List<SerializedProperty> m_SerialisedProperties = new List<SerializedProperty>();
@@ -26,11 +25,10 @@ namespace AssetTools
 		internal AssetImporter m_AssetImporter;
 		
 		private List<string> m_AssetsToForceApply = new List<string>();
-		public bool DoesProcess( AssetImporter item )
+		
+		public bool IsManuallyProcessing( AssetImporter item )
 		{
-			if( m_AssetsToForceApply.Contains( item.assetPath ) )
-				return true;
-			return false;
+			return m_AssetsToForceApply.Contains( item.assetPath );
 		}
 		
 		
@@ -82,6 +80,28 @@ namespace AssetTools
 				GatherPropertiesIfNeeded();
 				return m_ConstrainProperties == null ? 0 : m_ConstrainProperties.Count;
 			}
+		}
+		
+		public bool CanProcess( AssetImporter item )
+		{
+			if( m_ImporterReference == null )
+				return false;
+			if( ReferenceAssetImporter == item )
+				return false;
+			
+			Type t = item.GetType();
+			Type it = ReferenceAssetImporter.GetType();
+			if( t != it )
+				return false;
+			
+			if( m_AssetsToForceApply.Contains( item.assetPath ) )
+				return true;
+			
+			// TODO do checks to make sure it is valid
+			
+			// 
+			
+			return true;
 		}
 		
 		public bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
@@ -193,6 +213,7 @@ namespace AssetTools
 			if( m_HasProperties == 0 || m_ConstrainProperties.Count != m_ConstrainPropertiesDisplayNames.Count )
 				GatherProperties();
 		}
+		
 		internal void GatherProperties()
 		{
 			if( m_ImporterReference == null )
@@ -270,7 +291,7 @@ namespace AssetTools
 			return infos;
 		}
 
-		private List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
+		private static List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
 		{
 			SerializedProperty templateIter = template.GetIterator();
 			SerializedProperty assetIter = asset.GetIterator();
@@ -306,14 +327,11 @@ namespace AssetTools
 			AssetViewItem selectedNodes = context as AssetViewItem;
 			if( selectedNodes != null )
 			{
-				// forceable reimport the asset telling it to be force to be included within this module
+				// forcibly reimport the asset telling it to be force to be included within this module
 				m_AssetsToForceApply.Add( selectedNodes.path );
 				selectedNodes.ReimportAsset();
 				
-				// if( Apply( selectedNodes.AssetImporter ) )
-				// {
-				// 	selectedNodes.ReimportAsset();
-				// }
+				// TODO confirm that it now conforms
 				
 				foreach( IConformObject data in selectedNodes.conformData )
 				{
@@ -337,9 +355,11 @@ namespace AssetTools
 				Debug.LogError( "Could not fix Asset with no Assets selected." );
 		}
 		
-		
 		public bool Apply( AssetImporter item )
 		{
+			if( CanProcess( item ) == false )
+				return false;
+			
 			if( m_ConstrainProperties.Count > 0 )
 			{
 				SerializedObject profileSerializedObject = new SerializedObject( ReferenceAssetImporter );

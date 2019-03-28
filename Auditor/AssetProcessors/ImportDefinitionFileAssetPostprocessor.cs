@@ -9,14 +9,10 @@ namespace AssetTools
 {
 	public class ImportDefinitionFileAssetPostprocessor : AssetPostprocessor
 	{
+		// TODO inform the cache, so it does not need its own AssetPostprocessor script
 
 		private static void OnPostprocessAllAssets( string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths )
 		{
-			
-			
-			
-			// TODO if any profiles have moved, then we need to move stuff around and reimport stuff
-
 			// for any Profiles (that auto import is set set), imported / deleted / moved
 
 			// get any Assets that may have been affected.
@@ -39,14 +35,53 @@ namespace AssetTools
 
 		private void OnPreprocessAsset()
 		{
-			// find any profiles it may be affected by.
+			string path = assetImporter.assetPath;
+			string folderPath = path;
 			
-			// check if that is a valid profile
+			List<AuditProfileData> defs = ProfileCache.Profiles;
+			List<string> folders = new List<string>();
 			
-			// apply
+			while( folderPath != "" )
+			{
+				int index = folderPath.LastIndexOf( '/' );
+				if( index == -1 )
+					break;
+				
+				folderPath = folderPath.Remove( index );
+				folders.Add( folderPath );
+			}
+			
+			// Get a list of profiles in each folder
+			List<AuditProfileData>[] folderProfiles = new List<AuditProfileData>[folders.Count];
+			for( int i = 0; i < defs.Count; ++i )
+			{
+				for( int f = 0; f < folders.Count; ++f )
+				{
+					if( String.CompareOrdinal( folders[f], defs[i].m_FolderPath ) == 0 )
+					{
+						if( folderProfiles[f] == null )
+							folderProfiles[f] = new List<AuditProfileData>(1);
+						folderProfiles[f].Add( defs[i] );
+						break;
+					}
+				}
+			}
+
+			// going from root folder
+			for( int i = folderProfiles.Length-1; i >= 0; --i )
+			{
+				if( folderProfiles[i] == null )
+					continue;
+				
+				for( int d = 0; d < folderProfiles[i].Count; ++d )
+				{
+					folderProfiles[i][d].m_AuditProfile.ProcessAsset( this.assetImporter );
+				}
+			}
+			
 		}
 		
-		#if ! UNITY_2018_1_OR_NEWER
+#if ! UNITY_2018_1_OR_NEWER
 		private void OnPreprocessAudio()
 		{
 			OnPreprocessAsset();
@@ -61,7 +96,7 @@ namespace AssetTools
 		{
 			OnPreprocessAsset();
 		}
-		#endif
+#endif
 	}
 
 }

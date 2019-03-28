@@ -15,23 +15,26 @@ namespace AssetTools
 
 		
 		/// <summary>
-		/// If any of this is changed, do the Assets imported by it need to be reimported?
+		/// TODO If any of this is changed, do the Assets imported by it need to be reimported?
 		/// </summary>
 		
-		public string m_Method;
+		private string m_Method;
 		public string m_Data;
 
 		// used for locking it to a particular asset type
 		public string m_SearchFilter;
 		
 		
-		
 		private List<string> m_AssetsToForceApply = new List<string>();
-		public bool DoesProcess( AssetImporter item )
+		
+		public bool CanProcess( AssetImporter item )
 		{
-			if( m_AssetsToForceApply.Contains( item.assetPath ) )
-				return true;
-			return false;
+			return true;
+		}
+		
+		public bool IsManuallyProcessing( AssetImporter item )
+		{
+			return m_AssetsToForceApply.Contains( item.assetPath );
 		}
 		
 		

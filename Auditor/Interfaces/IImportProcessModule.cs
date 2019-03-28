@@ -13,6 +13,9 @@ namespace AssetTools
 		void FixCallback( AssetDetailList calledFromTreeView, object context );
 		bool Apply( AssetImporter item );
 
-		bool DoesProcess( AssetImporter item );
+		bool CanProcess( AssetImporter item );
+
+		bool IsManuallyProcessing( AssetImporter item );
+
 	}
 }

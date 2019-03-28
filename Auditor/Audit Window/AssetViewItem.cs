@@ -39,6 +39,7 @@ namespace AssetTools
 			if( !isAsset )
 				return;
 			
+			EditorUtility.SetDirty( AssetImporter );
 			AssetImporter.SaveAndReimport();
 			icon = AssetDatabase.GetCachedIcon( path ) as Texture2D;
 			

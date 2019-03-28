@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEditor;
 using AssetTools.GUIUtility;
@@ -10,17 +11,22 @@ namespace AssetTools
 	{
 		private AuditProfile m_Profile;
 		
-		SerializedProperty m_ProcessOnImport;
-		private SerializedProperty filtersListProperty;
-		private SerializedProperty importerModule;
+		private SerializedProperty m_ProcessOnImport;
+		private SerializedProperty m_FolderOnly;
+		private SerializedProperty m_FiltersListProperty;
+		private SerializedProperty m_ImporterModule;
+		private SerializedProperty m_PreprocessorModule;
 
 		private ImporterPropertiesModuleInspector propertiesModuleInspector = new ImporterPropertiesModuleInspector();
+		private PreprocessorModuleInspector PreprocessorModuleInspector = new PreprocessorModuleInspector();
 
 		void OnEnable()
 		{
 			m_ProcessOnImport = serializedObject.FindProperty("m_RunOnImport" );
-			filtersListProperty = serializedObject.FindProperty("m_Filters" );
-			importerModule = serializedObject.FindProperty("m_ImporterModule" );
+			m_FolderOnly = serializedObject.FindProperty("m_FilterToFolder" );
+			m_FiltersListProperty = serializedObject.FindProperty("m_Filters" );
+			m_ImporterModule = serializedObject.FindProperty("m_ImporterModule" );
+			m_PreprocessorModule = serializedObject.FindProperty("m_PreprocessorModule" );
 		}
 		
 		public override void OnInspectorGUI()
@@ -32,22 +38,31 @@ namespace AssetTools
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
 			
 			layout.Space( 10 );
+			EditorGUI.PropertyField( layout.Get(), m_FolderOnly, new GUIContent("Lock to folder", "Include a filter to limit this profile to this profile only"));
 			EditorGUI.PropertyField( layout.Get(), m_ProcessOnImport, new GUIContent("Process On Import"));
 			layout.Space( 10 );
 			
-			EditorGUI.LabelField( layout.Get(), "Search Filter's:" );
+			EditorGUI.LabelField( layout.Get(), "Search Filter's" );
 			
 			if( m_Profile.m_Filters == null )
 				m_Profile.m_Filters = new List<Filter>();
 
-			Rect boxAreaRect = layout.Get( (16 * m_Profile.m_Filters.Count) + (3 * m_Profile.m_Filters.Count) + 6 );
+			int filterCount = m_Profile.m_Filters.Count;
+			if( m_FolderOnly.boolValue )
+				filterCount++;
+
+			Rect boxAreaRect = layout.Get( (16 * filterCount) + (3 * filterCount) + 6 );
 			GUI.Box( boxAreaRect, GUIContent.none );
 
 			ControlRect subLayout = new ControlRect( boxAreaRect.x + 3, boxAreaRect.y + 3, boxAreaRect.width - 6, 16 );
 			subLayout.padding = 3;
 
 			int removeAt = -1;
-			for( int i = 0; i < filtersListProperty.arraySize; ++i )
+			int size = m_FiltersListProperty.arraySize;
+			if( m_FolderOnly.boolValue )
+				size++;
+			
+			for( int i = 0; i < size; ++i )
 			{
 				Rect segmentRect = subLayout.Get();
 				segmentRect.x += 3;
@@ -57,49 +72,64 @@ namespace AssetTools
 				segmentRect.width = segWidth - 3;
 				float startX = segmentRect.x;
 				
-				// TODO how do you get properties for this without looping all???
-				SerializedProperty filterProperty = filtersListProperty.GetArrayElementAtIndex( i );
-				filterProperty.NextVisible( true );
-				do
+				if( m_FolderOnly.boolValue && i == size-1 )
 				{
-					if( filterProperty.propertyType == SerializedPropertyType.Enum && filterProperty.name == "m_Target" )
+					EditorGUI.BeginDisabledGroup( true );
+					EditorGUI.EnumPopup( segmentRect, Filter.ConditionTarget.Directory );
+					segmentRect.x = startX + segWidth;
+					EditorGUI.EnumPopup( segmentRect, Filter.Condition.StartsWith );
+					segmentRect.x = startX + (segWidth * 2);
+					EditorGUI.TextField( segmentRect, "TODO" );
+					EditorGUI.EndDisabledGroup();
+				}
+				else
+				{
+					// TODO how do you get properties for this without looping all???
+					SerializedProperty filterProperty = m_FiltersListProperty.GetArrayElementAtIndex( i );
+					filterProperty.NextVisible( true );
+					do
 					{
-						segmentRect.x = startX;
-						EditorGUI.PropertyField( segmentRect, filterProperty, GUIContent.none );
-					}
-					else if( filterProperty.propertyType == SerializedPropertyType.Enum && filterProperty.name == "m_Condition" )
-					{
-						segmentRect.x = startX + segWidth;
-						EditorGUI.PropertyField( segmentRect, filterProperty, GUIContent.none );
-					}
-					else if( filterProperty.propertyType == SerializedPropertyType.String && filterProperty.name == "m_Wildcard" )
-					{
-						segmentRect.x = startX + (segWidth*2);
-						EditorGUI.PropertyField( segmentRect, filterProperty, GUIContent.none );
-					}
-				} while( filterProperty.NextVisible( false ) );
-			
-				segmentRect.x = startX + (segWidth*3);
-				segmentRect.width = segmentRect.height;
-				if( GUI.Button( segmentRect, "-" ) )
-					removeAt = i;
+						if( filterProperty.propertyType == SerializedPropertyType.Enum && filterProperty.name == "m_Target" )
+						{
+							segmentRect.x = startX;
+							EditorGUI.PropertyField( segmentRect, filterProperty, GUIContent.none );
+						}
+						else if( filterProperty.propertyType == SerializedPropertyType.Enum && filterProperty.name == "m_Condition" )
+						{
+							segmentRect.x = startX + segWidth;
+							EditorGUI.PropertyField( segmentRect, filterProperty, GUIContent.none );
+						}
+						else if( filterProperty.propertyType == SerializedPropertyType.String && filterProperty.name == "m_Wildcard" )
+						{
+							segmentRect.x = startX + (segWidth * 2);
+							EditorGUI.PropertyField( segmentRect, filterProperty, GUIContent.none );
+						}
+					} while( filterProperty.NextVisible( false ) );
+
+					segmentRect.x = startX + (segWidth * 3);
+					segmentRect.width = segmentRect.height;
+					if( GUI.Button( segmentRect, "-" ) )
+						removeAt = i;
+				}
 			}
 			
 			if( removeAt >= 0 )
-				filtersListProperty.DeleteArrayElementAtIndex( removeAt );
+				m_FiltersListProperty.DeleteArrayElementAtIndex( removeAt );
 
 			Rect layoutRect = layout.Get();
 			layoutRect.x = layoutRect.x + (layoutRect.width - 40);
 			layoutRect.width = 40;
 			if( GUI.Button( layoutRect, "Add" ) )
 			{
-				filtersListProperty.arraySize += 1;
+				m_FiltersListProperty.arraySize += 1;
 			}
 
 			layout.Space( 20 );
 			
 			// TODO do the rest as modules that can be added
-			propertiesModuleInspector.Draw( importerModule, layout );
+			propertiesModuleInspector.Draw( m_ImporterModule, layout );
+			PreprocessorModuleInspector.Draw( m_PreprocessorModule, layout );
+			
 
 			serializedObject.ApplyModifiedProperties();
 		}
