@@ -20,10 +20,12 @@ namespace AssetTools
 			FolderName,
 			Directory,
 			Extension,
-			AssetBundle,
+			AssetBundleName,
 			FileSize,
-			Labels // Labels are a bad use-case if doing Preprocessors - They cannot be obtained. It is possible to read the meta file. But if it is not Text based or formatting changes it could run into trouble
-			// TODO investigate more using post processing, etc.
+			ImportType,
+			// TODO remove labels??
+			Labels // Labels are a bad use-case if doing Preprocessors step - They cannot be obtained until after the import. It is possible to read the meta file. But if it is not Text based or formatting changes it could run into trouble
+
 			// TODO Can get original Texture width/height via reflection, test if can get it during preimport
 		}
 
@@ -113,7 +115,7 @@ namespace AssetTools
 						if( !Target( fi.Length, filters[i] ) )
 							return false;
 						break;
-					case ConditionTarget.AssetBundle:
+					case ConditionTarget.AssetBundleName:
 						if( !Target( importer.assetBundleName, filters[i] ) )
 							return false;
 						break;

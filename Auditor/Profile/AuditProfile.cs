@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEditor;
 
@@ -16,16 +17,29 @@ namespace AssetTools
 	}
 	
 	[CreateAssetMenu(fileName = "NewAssetAuditorProfile", menuName = "Asset Tools/New Auditor Profile", order = 0)]
-	public class AuditProfile : ScriptableObject
+	public class AuditProfile : ScriptableObject, IComparable<AuditProfile>
 	{
-		public bool m_RunOnImport = true;
+		public bool m_RunOnImport = false;
 		public bool m_FilterToFolder = true;
-			
+		public int m_SortIndex = 0;
+		
 		public List<Filter> m_Filters;
 		
 		// TODO is these better as a list of IImportProcessModule?
 		public ImporterPropertiesModule m_ImporterModule;
 		public PreprocessorModule m_PreprocessorModule;
+
+		internal string m_DirectoryPath = null;
+
+		internal string DirectoryPath
+		{
+			get
+			{
+				if( string.IsNullOrEmpty( m_DirectoryPath ) )
+					m_DirectoryPath = Path.GetDirectoryName( AssetDatabase.GetAssetPath( this ) );
+				return m_DirectoryPath;
+			}
+		}
 
 		public List<IConformObject> GetConformData( string asset )
 		{
@@ -33,17 +47,45 @@ namespace AssetTools
 			return m_ImporterModule.GetConformObjects( asset );
 		}
 
-		public void ProcessAsset( AssetImporter asset )
+		public void ProcessAsset( AssetImporter asset, bool checkForConformity = true )
 		{
-			if( Filter.Conforms( asset, m_Filters ) == false )
-				return;
 			if( !m_ImporterModule.CanProcess( asset ) )
 				return;
+			
+			if( checkForConformity )
+			{
+				if( m_FilterToFolder )
+				{
+					List<Filter> filters = new List<Filter>(m_Filters);
+					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
+					if( Filter.Conforms( asset, filters ) == false )
+						return;
+				}
+				else if( Filter.Conforms( asset, m_Filters ) == false )
+					return;
+			}
 			
 			if( m_RunOnImport )
 				m_ImporterModule.Apply( asset );
 			else if( m_ImporterModule.IsManuallyProcessing( asset )  )
 				m_ImporterModule.Apply( asset );
+		}
+
+		public int CompareTo( AuditProfile other )
+		{
+			if( other == null )
+				return 1;
+			
+			int s = m_SortIndex.CompareTo( other.m_SortIndex );
+			if( s == 0 )
+			{
+				int me = DirectoryPath.Length;
+				int o = other.DirectoryPath.Length;
+				int lengthCompare = DirectoryPath.Length.CompareTo( other.DirectoryPath.Length );
+				// if in same index, sort by shortest path length first
+				return lengthCompare;
+			}
+			return s;
 		}
 	}
 }

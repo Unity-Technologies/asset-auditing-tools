@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
@@ -16,6 +17,7 @@ namespace AssetTools
 		private SerializedProperty m_FiltersListProperty;
 		private SerializedProperty m_ImporterModule;
 		private SerializedProperty m_PreprocessorModule;
+		private SerializedProperty m_SortIndex;
 
 		private ImporterPropertiesModuleInspector propertiesModuleInspector = new ImporterPropertiesModuleInspector();
 		private PreprocessorModuleInspector PreprocessorModuleInspector = new PreprocessorModuleInspector();
@@ -27,6 +29,7 @@ namespace AssetTools
 			m_FiltersListProperty = serializedObject.FindProperty("m_Filters" );
 			m_ImporterModule = serializedObject.FindProperty("m_ImporterModule" );
 			m_PreprocessorModule = serializedObject.FindProperty("m_PreprocessorModule" );
+			m_SortIndex = serializedObject.FindProperty("m_SortIndex" );
 		}
 		
 		public override void OnInspectorGUI()
@@ -40,6 +43,7 @@ namespace AssetTools
 			layout.Space( 10 );
 			EditorGUI.PropertyField( layout.Get(), m_FolderOnly, new GUIContent("Lock to folder", "Include a filter to limit this profile to this profile only"));
 			EditorGUI.PropertyField( layout.Get(), m_ProcessOnImport, new GUIContent("Process On Import"));
+			EditorGUI.PropertyField( layout.Get(), m_SortIndex, new GUIContent("Sort Index"));
 			layout.Space( 10 );
 			
 			EditorGUI.LabelField( layout.Get(), "Search Filter's" );
@@ -79,7 +83,7 @@ namespace AssetTools
 					segmentRect.x = startX + segWidth;
 					EditorGUI.EnumPopup( segmentRect, Filter.Condition.StartsWith );
 					segmentRect.x = startX + (segWidth * 2);
-					EditorGUI.TextField( segmentRect, "TODO" );
+					EditorGUI.TextField( segmentRect, m_Profile.DirectoryPath );
 					EditorGUI.EndDisabledGroup();
 				}
 				else

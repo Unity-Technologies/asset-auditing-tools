@@ -35,49 +35,59 @@ namespace AssetTools
 
 		private void OnPreprocessAsset()
 		{
-			string path = assetImporter.assetPath;
-			string folderPath = path;
+			// TODO optimise this
+			List<AuditProfileData> defs = new List<AuditProfileData>(ProfileCache.Profiles);
+			defs.Sort();
 			
-			List<AuditProfileData> defs = ProfileCache.Profiles;
-			List<string> folders = new List<string>();
-			
-			while( folderPath != "" )
-			{
-				int index = folderPath.LastIndexOf( '/' );
-				if( index == -1 )
-					break;
-				
-				folderPath = folderPath.Remove( index );
-				folders.Add( folderPath );
-			}
-			
-			// Get a list of profiles in each folder
-			List<AuditProfileData>[] folderProfiles = new List<AuditProfileData>[folders.Count];
 			for( int i = 0; i < defs.Count; ++i )
 			{
-				for( int f = 0; f < folders.Count; ++f )
-				{
-					if( String.CompareOrdinal( folders[f], defs[i].m_FolderPath ) == 0 )
-					{
-						if( folderProfiles[f] == null )
-							folderProfiles[f] = new List<AuditProfileData>(1);
-						folderProfiles[f].Add( defs[i] );
-						break;
-					}
-				}
+				defs[i].m_AuditProfile.ProcessAsset( this.assetImporter );
 			}
-
-			// going from root folder
-			for( int i = folderProfiles.Length-1; i >= 0; --i )
-			{
-				if( folderProfiles[i] == null )
-					continue;
-				
-				for( int d = 0; d < folderProfiles[i].Count; ++d )
-				{
-					folderProfiles[i][d].m_AuditProfile.ProcessAsset( this.assetImporter );
-				}
-			}
+			
+			
+			// string path = assetImporter.assetPath;
+			// string folderPath = path;
+			// List<string> folders = new List<string>();
+			//
+			//  // this doesn't really work, there can be profiles outside of the folder structure that affects the
+			//
+			//  while( folderPath != "" )
+			//  {
+			//  	int index = folderPath.LastIndexOf( '/' );
+			//  	if( index == -1 )
+			//  		break;
+			//  	
+			//  	folderPath = folderPath.Remove( index );
+			//  	folders.Add( folderPath );
+			//  }
+			//
+			//  // Get a list of profiles in each folder
+			//  List<AuditProfileData>[] folderProfiles = new List<AuditProfileData>[folders.Count];
+			//  for( int i = 0; i < defs.Count; ++i )
+			//  {
+			//  	for( int f = 0; f < folders.Count; ++f )
+			//  	{
+			//  		if( String.CompareOrdinal( folders[f], defs[i].m_FolderPath ) == 0 )
+			//  		{
+			//  			if( folderProfiles[f] == null )
+			//  				folderProfiles[f] = new List<AuditProfileData>(1);
+			//  			folderProfiles[f].Add( defs[i] );
+			//  			break;
+			//  		}
+			//  	}
+			//  }
+			//
+			//  // going from root folder
+			//  for( int i = folderProfiles.Length-1; i >= 0; --i )
+			//  {
+			//  	if( folderProfiles[i] == null )
+			//  		continue;
+			//  	
+			//  	for( int d = 0; d < folderProfiles[i].Count; ++d )
+			//  	{
+			//  		folderProfiles[i][d].m_AuditProfile.ProcessAsset( this.assetImporter );
+			//  	}
+			//  }
 			
 		}
 		

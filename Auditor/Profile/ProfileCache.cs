@@ -6,11 +6,21 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	struct AuditProfileData
+	struct AuditProfileData : IComparer<AuditProfileData>, IComparable<AuditProfileData>
 	{
 		public string m_FolderPath;
+		// TODO probably dont need this
 		public string m_AssetPath;
 		public AuditProfile m_AuditProfile;
+		public int Compare( AuditProfileData x, AuditProfileData y )
+		{
+			return x.m_AuditProfile.CompareTo( y.m_AuditProfile );
+		}
+
+		public int CompareTo( AuditProfileData other )
+		{
+			return m_AuditProfile.CompareTo( other.m_AuditProfile );
+		}
 	}
 
 	public class ProfileCache : AssetPostprocessor
@@ -55,20 +65,20 @@ namespace AssetTools
 		/// </summary>
 		/// <param name="importedAssets"></param>
 		/// <param name="deletedAssets"></param>
-		/// <param name="movedAssets"></param>
+		/// <param name="movedToAssetPaths"></param>
 		/// <param name="movedFromAssetPaths"></param>
-		private static void OnPostprocessAllAssets( string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths )
+		private static void OnPostprocessAllAssets( string[] importedAssets, string[] deletedAssets, string[] movedToAssetPaths, string[] movedFromAssetPaths )
 		{
 			for( int i = 0; i < movedFromAssetPaths.Length; ++i )
 			{
 				for( int d = 0; d < s_Profiles.Count; ++d )
 				{
-					
 					if( s_Profiles[d].m_AssetPath == movedFromAssetPaths[i] )
 					{
 						AuditProfileData def = s_Profiles[d];
-						def.m_AssetPath = movedAssets[i];
+						def.m_AssetPath = movedToAssetPaths[i];
 						def.m_FolderPath = def.m_AssetPath.Remove( def.m_AssetPath.LastIndexOf( '/' ) );
+						def.m_AuditProfile.m_DirectoryPath = movedToAssetPaths[i];
 						s_Profiles[d] = def;
 						break;
 					}
@@ -99,6 +109,7 @@ namespace AssetTools
 					item.m_AssetPath = importedAssets[i];
 					item.m_FolderPath = item.m_AssetPath.Remove( item.m_AssetPath.LastIndexOf( '/' ) );
 					item.m_AuditProfile = profile;
+					profile.m_DirectoryPath = importedAssets[i];
 					s_Profiles.Add( item );
 				}
 			}
