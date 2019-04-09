@@ -11,11 +11,11 @@ namespace AssetTools
 		
 		bool IsManuallyProcessing( AssetImporter item );
 		
-		List<IConformObject> GetConformObjects( string asset );
+		List<IConformObject> GetConformObjects( string asset, AuditProfile profile );
 		bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths );
 
 		void FixCallback( AssetDetailList calledFromTreeView, object context );
 		
-		bool Apply( AssetImporter importer, AuditProfile fromProfile );
+		bool Apply( AssetImporter importer, AuditProfile profile );
 	}
 }

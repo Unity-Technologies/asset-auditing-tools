@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
-using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,6 +11,10 @@ namespace AssetTools
 		/// <summary>
 		/// TODO If any of this is changed, do the Assets imported by it need to be reimported?
 		/// </summary>
+		
+		
+		
+		private const string kModuleName = "PreprocessorModule";
 		
 		[SerializeField] private string m_MethodString;
 		[SerializeField] private string m_Data;
@@ -41,20 +41,47 @@ namespace AssetTools
 		}
 		
 		
-		public List<IConformObject> GetConformObjects( string asset )
+		public List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
 		{
-			// TODO What can be done here?
-			// Preprocessor versionCode compare?
+			// Preprocessor versionCode comparison
 			// will need someway to store this. It could not work well if imported not using it
 			// 1: add it to meta data. Only option is userData, which could conflict with other code packages. This would make it included in the hash for cache server. Which would be required.
-			// 2: store a database of imported version data. however if changed version of a method you want to process with. It would 
+			// 2: store a database of imported version data. Could be tricky to keep in sync
+			// 3: AssetDatabaseV2 supports asset dependencies
+			
 			List<IConformObject> infos = new List<IConformObject>();
-			
-			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
-			
-			
-			//  assetImporter.userData // get m_Importer methodData (if not found = false) (if version not the same = false )
-			
+
+			if( Method == null )
+			{
+				PreprocessorConformObject conformObject = new PreprocessorConformObject( "None Selected", 0, 0 );
+				infos.Add( conformObject );
+				return infos;
+			}
+
+			UserDataSerialization userData = UserDataSerialization.Get( asset );
+			List<UserDataSerialization.PostprocessorData> data = userData.m_ImporterPostprocessorData.assetProcessedWith;
+			string profileGuid = AssetDatabase.AssetPathToGUID( AssetDatabase.GetAssetPath( profile ) );
+
+			if( data != null )
+			{
+				for( int i = 0; i < data.Count; ++i )
+				{
+					if( data[i].moduleName != kModuleName ||
+					    data[i].typeName != Method.TypeName ||
+					    data[i].assemblyName != Method.AssemblyName ||
+					    data[i].importDefinitionGUID != profileGuid )
+						continue;
+
+					PreprocessorConformObject conformObject = new PreprocessorConformObject( data[i].typeName, data[i].version, Method.Version );
+					infos.Add( conformObject );
+					break;
+				}
+			}
+			else
+			{
+				PreprocessorConformObject conformObject = new PreprocessorConformObject( Method.TypeName, int.MinValue, Method.Version );
+				infos.Add( conformObject );
+			}
 			return infos;
 		}
 
@@ -101,7 +128,7 @@ namespace AssetTools
 		{
 			UserDataSerialization data = UserDataSerialization.Get( importer.assetPath );
 			string profileGuid = AssetDatabase.AssetPathToGUID( AssetDatabase.GetAssetPath( profile ) );
-			data.m_ImporterPostprocessorData.UpdateOrAdd( new UserDataSerialization.PostprocessorData( profileGuid, "PreprocessorModule", Method.AssemblyName, Method.TypeName, Method.Version ) );
+			data.m_ImporterPostprocessorData.UpdateOrAdd( new UserDataSerialization.PostprocessorData( profileGuid, kModuleName, Method.AssemblyName, Method.TypeName, Method.Version ) );
 			data.UpdateImporterUserData();
 		}
 		

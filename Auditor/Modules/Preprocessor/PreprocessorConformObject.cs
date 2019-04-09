@@ -18,9 +18,14 @@ namespace AssetTools
 					if( !m_SubObjects[i].Conforms )
 						return false;
 				}
-				return m_Conforms;
+				
+				return m_ImportedVersion == m_MethodVersion;
 			}
-			set { m_Conforms = value; }
+			set
+			{
+				if( value )
+					m_ImportedVersion = m_MethodVersion;
+			}
 		}
 
 		public List<IConformObject> SubObjects
@@ -33,31 +38,24 @@ namespace AssetTools
 		{
 			get
 			{
-				return m_MethodName; // TODO with version number
+				return m_MethodName; // TODO with importedVersion number
 			}
 			set { m_MethodName = value; }
 		}
 
-		private bool m_Conforms = true;
 		private List<IConformObject> m_SubObjects = new List<IConformObject>();
 		
 		private string m_MethodName;
-		private int m_Version;
-		private AssetImporter m_Importer;
+		private readonly int m_MethodVersion;
+		private int m_ImportedVersion;
 		
 
-		// public PreprocessorConformObject( string name, int version )
-		// {
-		// 	m_MethodName = name;
-		// 	m_Version = version;
-		// }
-
-		private PreprocessorConformObject( string name, int version, AssetImporter importer )
+		public PreprocessorConformObject( string name, int importedVersion, int methodVersion )
 		{
-			// method name and version for the method in question. (may need to get it when checking conforms instead)
+			// method name and importedVersion for the method in question. (may need to get it when checking conforms instead)
 			m_MethodName = name;
-			m_Version = version;
-			m_Importer = importer;
+			m_ImportedVersion = importedVersion;
+			m_MethodVersion = methodVersion;
 		}
 
 

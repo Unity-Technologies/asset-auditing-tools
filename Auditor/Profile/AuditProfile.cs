@@ -44,10 +44,8 @@ namespace AssetTools
 
 		public List<IConformObject> GetConformData( string asset )
 		{
-			// TODO each module
-			List<IConformObject> lst = m_ImporterModule.GetConformObjects( asset );
-			lst.AddRange( m_PreprocessorModule.GetConformObjects( asset ) );
-			
+			List<IConformObject> lst = m_ImporterModule.GetConformObjects( asset, this );
+			lst.AddRange( m_PreprocessorModule.GetConformObjects( asset, this ) );
 			return lst;
 		}
 

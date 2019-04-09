@@ -259,7 +259,7 @@ namespace AssetTools
 			}
 		}
 		
-		public List<IConformObject> GetConformObjects( string asset )
+		public List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
 		{
 			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
 			if( m_ImporterReference == null )
