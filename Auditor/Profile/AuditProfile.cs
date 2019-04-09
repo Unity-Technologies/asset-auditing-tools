@@ -44,14 +44,14 @@ namespace AssetTools
 		public List<IConformObject> GetConformData( string asset )
 		{
 			// TODO each module
-			return m_ImporterModule.GetConformObjects( asset );
+			List<IConformObject> lst = m_ImporterModule.GetConformObjects( asset );
+			lst.AddRange( m_PreprocessorModule.GetConformObjects( asset ) );
+			
+			return lst;
 		}
 
 		public void ProcessAsset( AssetImporter asset, bool checkForConformity = true )
 		{
-			if( !m_ImporterModule.CanProcess( asset ) )
-				return;
-			
 			if( checkForConformity )
 			{
 				if( m_FilterToFolder )
@@ -64,11 +64,19 @@ namespace AssetTools
 				else if( Filter.Conforms( asset, m_Filters ) == false )
 					return;
 			}
-			
+
 			if( m_RunOnImport )
-				m_ImporterModule.Apply( asset );
-			else if( m_ImporterModule.IsManuallyProcessing( asset )  )
-				m_ImporterModule.Apply( asset );
+			{
+				m_ImporterModule.Apply( asset, this );
+				m_PreprocessorModule.Apply( asset, this );
+			}
+			else
+			{
+				if( m_ImporterModule.IsManuallyProcessing( asset ) )
+					m_ImporterModule.Apply( asset, this );
+				if( m_PreprocessorModule.IsManuallyProcessing( asset ) )
+					m_PreprocessorModule.Apply( asset, this );
+			}
 		}
 
 		public int CompareTo( AuditProfile other )

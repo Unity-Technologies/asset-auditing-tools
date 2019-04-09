@@ -355,26 +355,26 @@ namespace AssetTools
 				Debug.LogError( "Could not fix Asset with no Assets selected." );
 		}
 		
-		public bool Apply( AssetImporter item )
+		public bool Apply( AssetImporter importer, AuditProfile fromProfile )
 		{
-			if( CanProcess( item ) == false )
+			if( CanProcess( importer ) == false )
 				return false;
 			
 			if( m_ConstrainProperties.Count > 0 )
 			{
 				SerializedObject profileSerializedObject = new SerializedObject( ReferenceAssetImporter );
-				SerializedObject assetImporterSO = new SerializedObject( item );
+				SerializedObject assetImporterSO = new SerializedObject( importer );
 				CopyConstrainedProperties( assetImporterSO, profileSerializedObject );
 			}
 			else
 			{
 				// we need to maintain userData in order to have cache hash valid for selective Postprocessing features
-				string ud = item.userData;
-				EditorUtility.CopySerialized( ReferenceAssetImporter, item );
-				item.userData = ud;
+				string ud = importer.userData;
+				EditorUtility.CopySerialized( ReferenceAssetImporter, importer );
+				importer.userData = ud;
 			}
 
-			m_AssetsToForceApply.Remove( item.assetPath );
+			m_AssetsToForceApply.Remove( importer.assetPath );
 			return true;
 		}
 		

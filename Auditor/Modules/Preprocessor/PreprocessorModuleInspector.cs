@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Reflection;
 using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace AssetTools
 {
@@ -11,34 +9,73 @@ namespace AssetTools
 	{
 		private PreprocessorModule m_Module;
 		
-		private SerializedProperty m_ImporterReferenceSerializedProperty;
-		private SerializedProperty m_PropertiesArraySerializedProperty;
+		private SerializedProperty m_MethodSerializedProperty;
+		private SerializedProperty m_DataSerializedProperty;
 
-		private int m_MethodSelected = 0;
-		
 		public void Draw( SerializedProperty property, ControlRect layout )
 		{
+			
+			if( m_Module == null )
+			{
+				AuditProfile profile = property.serializedObject.targetObject as AuditProfile;
+				if( profile == null )
+				{
+					Debug.LogError( "PreprocessorModule must be apart of a profile Object" );
+					return;
+				}
+				m_Module = profile.m_PreprocessorModule;
+			}
+			if( m_MethodSerializedProperty == null || m_DataSerializedProperty == null )
+			{
+				List<string> propertyNames = new List<string> {"m_MethodString", "m_Data"};
+				List<SerializedProperty> properties = SerializationUtilities.FindPropertiesInClass( property, propertyNames );
+				m_MethodSerializedProperty = properties[0];
+				m_DataSerializedProperty = properties[1];
+				if( m_MethodSerializedProperty == null || m_DataSerializedProperty == null )
+				{
+					Debug.LogError( "Invalid properties for PreprocessorModule" );
+					return;
+				}
+			}
+			
 			List<ProcessorMethodInfo> methods = PreprocessorImplementorCache.Methods;
 			GUIContent[] contents = new GUIContent[methods.Count+1];
 			contents[0] = new GUIContent("None Selected");
-			
+
+			int selectedMethod = 0;
 			for( int i=1; i<methods.Count+1; ++i )
 			{
-				contents[i] = new GUIContent(methods[i-1].m_ClassName);
+				contents[i] = new GUIContent(methods[i-1].TypeName);
+				if( !string.IsNullOrEmpty( m_Module.methodString ) )
+				{
+					if( string.Equals( m_Module.methodString, methods[i - 1].TypeName + ", " + methods[i - 1].AssemblyName ) )
+						selectedMethod = i;
+				}
+			}
+
+			if( !string.IsNullOrEmpty( m_Module.methodString ) && selectedMethod == 0 )
+			{
+				Debug.LogError( "methodString not found in project : " + m_Module.methodString );
 			}
 
 			EditorGUI.BeginChangeCheck();
-			m_MethodSelected = EditorGUI.Popup( layout.Get(), new GUIContent("Preprocessor Method"), m_MethodSelected, contents );
+			selectedMethod = EditorGUI.Popup( layout.Get(), new GUIContent("Preprocessor methodString"), selectedMethod, contents );
 			if( EditorGUI.EndChangeCheck() )
 			{
-				int id = m_MethodSelected - 1;
-				if( id >= 0 )
+				if( selectedMethod == 0 )
+					m_MethodSerializedProperty.stringValue = "";
+				else
 				{
-					// TODO set the method info to the module
-					MethodInfo m = methods[id].m_MethodInfo;
+					int id = selectedMethod - 1;
+					if( id >= 0 )
+					{
+						m_MethodSerializedProperty.stringValue = methods[id].TypeName + ", " + methods[id].AssemblyName;
+						m_Module.m_ProcessorMethodInfo = null;
+					}
 				}
-
 			}
+
+			EditorGUI.PropertyField( layout.Get(), m_DataSerializedProperty );
 		}
 
 	}

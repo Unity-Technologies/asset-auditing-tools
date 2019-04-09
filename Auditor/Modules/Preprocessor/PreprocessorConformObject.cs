@@ -57,7 +57,6 @@ namespace AssetTools
 			// method name and version for the method in question. (may need to get it when checking conforms instead)
 			m_MethodName = name;
 			m_Version = version;
-			
 			m_Importer = importer;
 		}
 

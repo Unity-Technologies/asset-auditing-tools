@@ -57,6 +57,7 @@ namespace AssetTools
 					m_AuditProfile = profile
 				} );
 			}
+			s_Profiles.Sort();
 		}
 		
 		/// <summary>

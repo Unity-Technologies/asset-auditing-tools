@@ -7,15 +7,15 @@ namespace AssetTools
 {
 	public interface IImportProcessModule
 	{
+		bool CanProcess( AssetImporter item );
+		
+		bool IsManuallyProcessing( AssetImporter item );
+		
 		List<IConformObject> GetConformObjects( string asset );
 		bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths );
 
 		void FixCallback( AssetDetailList calledFromTreeView, object context );
-		bool Apply( AssetImporter item );
-
-		bool CanProcess( AssetImporter item );
-
-		bool IsManuallyProcessing( AssetImporter item );
-
+		
+		bool Apply( AssetImporter importer, AuditProfile fromProfile );
 	}
 }

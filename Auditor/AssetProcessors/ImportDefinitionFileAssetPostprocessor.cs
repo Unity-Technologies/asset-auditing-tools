@@ -36,15 +36,15 @@ namespace AssetTools
 		private void OnPreprocessAsset()
 		{
 			// TODO optimise this
-			List<AuditProfileData> defs = new List<AuditProfileData>(ProfileCache.Profiles);
-			defs.Sort();
-			
+			List<AuditProfileData> defs = ProfileCache.Profiles;
+			// Any profiles can interact with the Asset, so we need to check all
 			for( int i = 0; i < defs.Count; ++i )
 			{
 				defs[i].m_AuditProfile.ProcessAsset( this.assetImporter );
 			}
 			
-			
+			// // this is pretty optimal to Get profiles up its folder structure from root. Could be better to limit this approach
+			// // Need to decide if want IDF's outside the folder structure. And if to keep the Window (for not auto importing IDF)
 			// string path = assetImporter.assetPath;
 			// string folderPath = path;
 			// List<string> folders = new List<string>();
