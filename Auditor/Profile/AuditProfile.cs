@@ -29,7 +29,7 @@ namespace AssetTools
 		public ImporterPropertiesModule m_ImporterModule;
 		public PreprocessorModule m_PreprocessorModule;
 
-		internal string m_DirectoryPath = null;
+		private string m_DirectoryPath = null;
 
 		internal string DirectoryPath
 		{
@@ -39,6 +39,7 @@ namespace AssetTools
 					m_DirectoryPath = Path.GetDirectoryName( AssetDatabase.GetAssetPath( this ) );
 				return m_DirectoryPath;
 			}
+			set { m_DirectoryPath = null; }
 		}
 
 		public List<IConformObject> GetConformData( string asset )

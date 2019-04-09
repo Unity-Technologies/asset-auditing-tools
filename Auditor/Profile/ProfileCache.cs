@@ -79,7 +79,7 @@ namespace AssetTools
 						AuditProfileData def = s_Profiles[d];
 						def.m_AssetPath = movedToAssetPaths[i];
 						def.m_FolderPath = def.m_AssetPath.Remove( def.m_AssetPath.LastIndexOf( '/' ) );
-						def.m_AuditProfile.m_DirectoryPath = movedToAssetPaths[i];
+						def.m_AuditProfile.DirectoryPath = null;
 						s_Profiles[d] = def;
 						break;
 					}
@@ -110,7 +110,7 @@ namespace AssetTools
 					item.m_AssetPath = importedAssets[i];
 					item.m_FolderPath = item.m_AssetPath.Remove( item.m_AssetPath.LastIndexOf( '/' ) );
 					item.m_AuditProfile = profile;
-					profile.m_DirectoryPath = importedAssets[i];
+					profile.DirectoryPath = null;
 					s_Profiles.Add( item );
 				}
 			}
