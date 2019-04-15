@@ -41,18 +41,20 @@ namespace AssetTools
 			
 			EditorUtility.SetDirty( AssetImporter );
 			AssetImporter.SaveAndReimport();
-			icon = AssetDatabase.GetCachedIcon( path ) as Texture2D;
 			
-			if( !conforms )
+		}
+
+		public void Refresh()
+		{
+			icon = AssetDatabase.GetCachedIcon( path ) as Texture2D;
+		
+			conforms = true;
+			for( int i = 0; i < conformData.Count; ++i )
 			{
-				conforms = true;
-				for( int i = 0; i < conformData.Count; ++i )
+				if( conformData[i].Conforms == false )
 				{
-					if( conformData[i].Conforms == false )
-					{
-						conforms = false;
-						break;
-					}
+					conforms = false;
+					break;
 				}
 			}
 		}

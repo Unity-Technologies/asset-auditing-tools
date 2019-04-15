@@ -321,38 +321,56 @@ namespace AssetTools
 		
 		public void FixCallback( AssetDetailList calledFromTreeView, object context )
 		{
-			// TODO find out how to multi select
 			// TODO if selection is a folder
 			
-			AssetViewItem selectedNodes = context as AssetViewItem;
-			if( selectedNodes != null )
+			List<AssetViewItem> toFix = context as List<AssetViewItem>;
+			if( toFix == null || toFix.Count == 0 )
 			{
-				// forcibly reimport the asset telling it to be force to be included within this module
-				m_AssetsToForceApply.Add( selectedNodes.path );
-				selectedNodes.ReimportAsset();
-				
-				// TODO confirm that it now conforms
-				
-				foreach( IConformObject data in selectedNodes.conformData )
+				AssetViewItem selectedItem = context as AssetViewItem;
+				if( selectedItem != null )
 				{
-					if( data is PropertyConformObject )
-						data.Conforms = true;
+					toFix = new List<AssetViewItem>(1);
+					toFix.Add( selectedItem );
 				}
-				
-				selectedNodes.conforms = true;
-				for( int i = 0; i < selectedNodes.conformData.Count; ++i )
+			}
+			
+			if( toFix != null )
+			{
+				AssetDatabase.StartAssetEditing();
+				for( int i=0; i<toFix.Count; ++i )
 				{
-					if( selectedNodes.conformData[i].Conforms == false )
+					// forcibly reimport the asset telling it to be force to be included within this module
+					m_AssetsToForceApply.Add( toFix[i].path );
+					toFix[i].ReimportAsset();
+				}
+				AssetDatabase.StopAssetEditing();
+
+				for( int i = 0; i < toFix.Count; ++i )
+				{
+					// TODO confirm that it now conforms, currently just set everything as Conforms
+					foreach( IConformObject data in toFix[i].conformData )
 					{
-						selectedNodes.conforms = false;
-						break;
+						if( data is PropertyConformObject )
+							SetAllConformObjects( data as PropertyConformObject, true );
 					}
+					
+					toFix[i].Refresh();
 				}
 				
 				calledFromTreeView.m_PropertyList.Reload();
 			}
 			else
 				Debug.LogError( "Could not fix Asset with no Assets selected." );
+		}
+
+		void SetAllConformObjects( PropertyConformObject obj, bool value )
+		{
+			obj.Conforms = value;
+			foreach( IConformObject data in obj.SubObjects )
+			{
+				if( data is PropertyConformObject )
+					SetAllConformObjects( data as PropertyConformObject, value );
+			}
 		}
 		
 		public bool Apply( AssetImporter importer, AuditProfile fromProfile )

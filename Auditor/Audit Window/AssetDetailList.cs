@@ -231,10 +231,20 @@ namespace AssetTools
 				return;
 			
 			GenericMenu menu = new GenericMenu();
+			object context = item;
+
+			for( int i = 0; i < m_SelectedItems.Count; ++i )
+			{
+				if( id == m_SelectedItems[i].id )
+				{
+					context = new List<AssetViewItem>( m_SelectedItems );
+					break;
+				}
+			}
 			
 			// TODO get list of possible selections from modules
 			
-			menu.AddItem( new GUIContent( "Conform to Importer Template Properties" ), false, FixCallbackImporterProperties, item );
+			menu.AddItem( new GUIContent( "Conform to Importer Template Properties" ), false, FixCallbackImporterProperties, context );
 			menu.ShowAsContext();
 		}
 
