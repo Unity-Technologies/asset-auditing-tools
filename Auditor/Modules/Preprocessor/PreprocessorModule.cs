@@ -6,42 +6,28 @@ using UnityEngine;
 namespace AssetTools
 {
 	[Serializable]
-	public class PreprocessorModule : IImportProcessModule
+	public class PreprocessorModule : BaseModule
 	{
 		/// <summary>
 		/// TODO If any of this is changed, do the Assets imported by it need to be reimported?
 		/// </summary>
 		
-		
-		
 		private const string kModuleName = "PreprocessorModule";
 		
 		[SerializeField] private string m_MethodString;
 		[SerializeField] private string m_Data;
-
-		// used for locking it to a particular asset type
-		public string m_SearchFilter;
-
 		
-		private List<string> m_AssetsToForceApply = new List<string>();
-
 		public string methodString
 		{
 			get { return m_MethodString; }
 		}
-
-		public bool CanProcess( AssetImporter item )
+		
+		protected override Type GetConformObjectType()
 		{
-			return true;
+			return typeof(PreprocessorConformObject);
 		}
 		
-		public bool IsManuallyProcessing( AssetImporter item )
-		{
-			return m_AssetsToForceApply.Contains( item.assetPath );
-		}
-		
-		
-		public List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
+		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
 		{
 			// Preprocessor versionCode comparison
 			// will need someway to store this. It could not work well if imported not using it
@@ -84,66 +70,6 @@ namespace AssetTools
 			}
 			return infos;
 		}
-
-		public bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
-		{
-			typeFilter = m_SearchFilter;
-			return true;
-		}
-		
-		public void FixCallback( AssetDetailList calledFromTreeView, object context )
-		{
-			// TODO if selection is a folder
-			
-			List<AssetViewItem> toFix = context as List<AssetViewItem>;
-			if( toFix == null || toFix.Count == 0 )
-			{
-				AssetViewItem selectedItem = context as AssetViewItem;
-				if( selectedItem != null )
-				{
-					toFix = new List<AssetViewItem>(1);
-					toFix.Add( selectedItem );
-				}
-			}
-			
-			if( toFix != null )
-			{
-				AssetDatabase.StartAssetEditing();
-				for( int i=0; i<toFix.Count; ++i )
-				{
-					// forcibly reimport the asset telling it to be force to be included within this module
-					m_AssetsToForceApply.Add( toFix[i].path );
-					toFix[i].ReimportAsset();
-				}
-				AssetDatabase.StopAssetEditing();
-
-				for( int i = 0; i < toFix.Count; ++i )
-				{
-					// TODO confirm that it now conforms, currently just set everything as Conforms
-					foreach( IConformObject data in toFix[i].conformData )
-					{
-						if( data is PropertyConformObject )
-							SetAllConformObjects( data as PreprocessorConformObject, true );
-					}
-					
-					toFix[i].Refresh();
-				}
-				
-				calledFromTreeView.m_PropertyList.Reload();
-			}
-			else
-				Debug.LogError( "Could not fix Asset with no Assets selected." );
-		}
-
-		void SetAllConformObjects( PreprocessorConformObject obj, bool value )
-		{
-			obj.Conforms = value;
-			foreach( IConformObject data in obj.SubObjects )
-			{
-				if( data is PropertyConformObject )
-					SetAllConformObjects( data as PreprocessorConformObject, value );
-			}
-		}
 		
 		private void SetUserData( AssetImporter importer, AuditProfile profile )
 		{
@@ -153,7 +79,7 @@ namespace AssetTools
 			data.UpdateImporterUserData();
 		}
 		
-		public bool Apply( AssetImporter item, AuditProfile fromProfile )
+		public override bool Apply( AssetImporter item, AuditProfile fromProfile )
 		{
 			if( string.IsNullOrEmpty( m_MethodString ) == false )
 			{
@@ -204,8 +130,8 @@ namespace AssetTools
 				return m_ProcessorMethodInfo;
 			}
 		}
-		
-		public void GetMethodStrings( out string assemblyName, out string typeString )
+
+		private void GetMethodStrings( out string assemblyName, out string typeString )
 		{
 			int commaIndex = m_MethodString.IndexOf( ',' );
 			if( commaIndex > 0 )
@@ -219,92 +145,5 @@ namespace AssetTools
 				typeString = m_MethodString;
 			}
 		}
-		
-		/*
-		 
-		 // DECISION Would it be better to get the method at Apply time?
-		
-		internal MethodInfo m_MethodInfo = null;
-		private static Assembly[] m_Assemblies;
-		[InitializeOnLoadMethod]
-		static void CollectAssemblies()
-		{
-			m_Assemblies = AppDomain.CurrentDomain.GetAssemblies();
-		}
-
-
-		private static MethodInfo GetMethodInfo( string m_MethodInfoString )
-		{
-			Assembly selected = null;
-			string typeString;
-			string typeName;
-			int commaIndex = m_MethodInfoString.IndexOf( ',' );
-			
-			if( commaIndex > 0 )
-			{
-				string assemblyName = m_MethodInfoString.Substring( commaIndex + 2 );
-				// has an Assembly defined in the string. Use that
-				for( int i = 0; i < m_Assemblies.Length; ++i )
-				{
-					if( m_Assemblies[i].FullName != assemblyName )
-						continue;
-					selected = m_Assemblies[i];
-					break;
-				}
-
-				string methodInfoString = m_MethodInfoString.Substring( 0, commaIndex ) + ".OnPreprocessAsset";
-
-				int lastStop = 0;
-				for( int index = commaIndex; index >= 0; --index )
-				{
-					if( methodInfoString[index] == '.' )
-					{
-						lastStop = index;
-						break;
-					}
-				}
-
-				Assert.IsTrue( lastStop > 0, "Error: Invalid methodString string." );
-				typeName = methodInfoString.Substring( lastStop+1 );
-				typeString = methodInfoString.Substring( 0, lastStop );
-			}
-			else
-			{
-				m_MethodInfoString = m_MethodInfoString + ".OnPreprocessAsset";
-				typeName = m_MethodInfoString.Substring( m_MethodInfoString.LastIndexOf( '.' ) + 1 );
-				typeString = m_MethodInfoString.Substring( 0, m_MethodInfoString.LastIndexOf( '.' ) );
-			}
-
-			Type reflectedType = null;
-
-			if( selected == null )
-			{
-				// search through all to find type
-				for( int i = 0; i < m_Assemblies.Length; ++i )
-				{
-					reflectedType = m_Assemblies[i].GetType( typeString );
-					if( reflectedType != null )
-						break;
-				}
-			}
-			else
-				reflectedType = selected.GetType( typeString );
-
-			if( reflectedType == null )
-			{
-				Debug.LogWarning( string.Format( "Invalid method address for PostProcessMethod for {0}. Could not find type", m_MethodInfoString ) );
-				return null;
-			}
-
-			// will always be public void OnPreprocessAsset( AssetImporter importer, string data )
-			MethodInfo postprocessorMethodToInvoke = reflectedType.GetMethod( typeName, BindingFlags.Public | BindingFlags.Instance, null, CallingConventions.Any, new []{ typeof(AssetImporter), typeof(string) }, null );
-
-			if( postprocessorMethodToInvoke == null )
-				Debug.LogWarning( string.Format( "Invalid method address for PostProcessMethod for {0}. Could not find method", m_MethodInfoString ) );
-
-			return postprocessorMethodToInvoke;
-		}
-		
-		*/
 	}
 }

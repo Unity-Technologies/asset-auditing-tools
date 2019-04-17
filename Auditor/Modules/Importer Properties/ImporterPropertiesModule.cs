@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AssetTools
 {
 	[System.Serializable]
-	public class ImporterPropertiesModule : IImportProcessModule
+	public class ImporterPropertiesModule : BaseModule
 	{
 		public UnityEngine.Object m_ImporterReference = null;
 		
@@ -24,13 +24,10 @@ namespace AssetTools
 		
 		internal AssetImporter m_AssetImporter;
 		
-		private List<string> m_AssetsToForceApply = new List<string>();
-		
-		public bool IsManuallyProcessing( AssetImporter item )
+		protected override Type GetConformObjectType()
 		{
-			return m_AssetsToForceApply.Contains( item.assetPath );
+			return typeof(PropertyConformObject);
 		}
-		
 		
 		private AssetType GetAssetType()
 		{
@@ -82,7 +79,7 @@ namespace AssetTools
 			}
 		}
 		
-		public bool CanProcess( AssetImporter item )
+		public override bool CanProcess( AssetImporter item )
 		{
 			if( m_ImporterReference == null )
 				return false;
@@ -104,7 +101,7 @@ namespace AssetTools
 			return true;
 		}
 		
-		public bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
+		public override bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
 		{
 			typeFilter = null;
 			if( m_ImporterReference != null )
@@ -133,6 +130,38 @@ namespace AssetTools
 			}
 
 			return false;
+		}
+		
+		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
+		{
+			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
+			if( m_ImporterReference == null )
+				return new List<IConformObject>(0);
+			
+			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
+			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
+			
+			// TODO if there are any. check to make sure these are valid constraints, if not, don't include them in the count 
+			if( m_ConstrainProperties.Count == 0 )
+			{
+				return CompareSerializedObject( profileImporterSO, assetImporterSO );
+			}
+			
+			List<IConformObject> infos = new List<IConformObject>();
+			
+			for( int i = 0; i < m_ConstrainProperties.Count; ++i )
+			{
+				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( m_ConstrainProperties[i] );
+				if( assetRuleSP == null )
+					continue; // could be properties from another Object
+				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( m_ConstrainProperties[i] );
+
+				PropertyConformObject conformObject = new PropertyConformObject( m_ConstrainProperties[i] );
+				conformObject.SetSerializedProperties( assetRuleSP, foundAssetSP );
+				infos.Add( conformObject );
+			}
+
+			return infos;
 		}
 
 		internal void AddProperty( string propName, bool isRealName = true )
@@ -258,38 +287,6 @@ namespace AssetTools
 					m_ConstrainPropertiesDisplayNames[i] = property.displayName;
 			}
 		}
-		
-		public List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
-		{
-			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
-			if( m_ImporterReference == null )
-				return new List<IConformObject>(0);
-			
-			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
-			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
-			
-			// TODO if there are any. check to make sure these are valid constraints, if not, don't include them in the count 
-			if( m_ConstrainProperties.Count == 0 )
-			{
-				return CompareSerializedObject( profileImporterSO, assetImporterSO );
-			}
-			
-			List<IConformObject> infos = new List<IConformObject>();
-			
-			for( int i = 0; i < m_ConstrainProperties.Count; ++i )
-			{
-				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( m_ConstrainProperties[i] );
-				if( assetRuleSP == null )
-					continue; // could be properties from another Object
-				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( m_ConstrainProperties[i] );
-
-				PropertyConformObject conformObject = new PropertyConformObject( m_ConstrainProperties[i] );
-				conformObject.SetSerializedProperties( assetRuleSP, foundAssetSP );
-				infos.Add( conformObject );
-			}
-
-			return infos;
-		}
 
 		private static List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
 		{
@@ -319,61 +316,7 @@ namespace AssetTools
 			return infos;
 		}
 		
-		public void FixCallback( AssetDetailList calledFromTreeView, object context )
-		{
-			// TODO if selection is a folder
-			
-			List<AssetViewItem> toFix = context as List<AssetViewItem>;
-			if( toFix == null || toFix.Count == 0 )
-			{
-				AssetViewItem selectedItem = context as AssetViewItem;
-				if( selectedItem != null )
-				{
-					toFix = new List<AssetViewItem>(1);
-					toFix.Add( selectedItem );
-				}
-			}
-			
-			if( toFix != null )
-			{
-				AssetDatabase.StartAssetEditing();
-				for( int i=0; i<toFix.Count; ++i )
-				{
-					// forcibly reimport the asset telling it to be force to be included within this module
-					m_AssetsToForceApply.Add( toFix[i].path );
-					toFix[i].ReimportAsset();
-				}
-				AssetDatabase.StopAssetEditing();
-
-				for( int i = 0; i < toFix.Count; ++i )
-				{
-					// TODO confirm that it now conforms, currently just set everything as Conforms
-					foreach( IConformObject data in toFix[i].conformData )
-					{
-						if( data is PropertyConformObject )
-							SetAllConformObjects( data as PropertyConformObject, true );
-					}
-					
-					toFix[i].Refresh();
-				}
-				
-				calledFromTreeView.m_PropertyList.Reload();
-			}
-			else
-				Debug.LogError( "Could not fix Asset with no Assets selected." );
-		}
-
-		void SetAllConformObjects( PropertyConformObject obj, bool value )
-		{
-			obj.Conforms = value;
-			foreach( IConformObject data in obj.SubObjects )
-			{
-				if( data is PropertyConformObject )
-					SetAllConformObjects( data as PropertyConformObject, value );
-			}
-		}
-		
-		public bool Apply( AssetImporter importer, AuditProfile fromProfile )
+		public override bool Apply( AssetImporter importer, AuditProfile fromProfile )
 		{
 			if( CanProcess( importer ) == false )
 				return false;
