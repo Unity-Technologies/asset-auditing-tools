@@ -24,9 +24,14 @@ namespace AssetTools
 		
 		internal AssetImporter m_AssetImporter;
 		
-		protected override Type GetConformObjectType()
+		public override Type GetConformObjectType()
 		{
 			return typeof(PropertyConformObject);
+		}
+		
+		public override string AssetMenuFixString
+		{
+			get { return "Conform to Importer Template Properties"; }
 		}
 		
 		private AssetType GetAssetType()

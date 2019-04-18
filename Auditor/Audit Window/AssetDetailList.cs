@@ -8,6 +8,18 @@ namespace AssetTools
 {
 	public class AssetDetailList : TreeView
 	{
+		private class AssetViewItemMenuContext
+		{
+			public List<IImportProcessModule> m_Modules;
+			public List<AssetViewItem> m_Items;
+
+			public AssetViewItemMenuContext( List<IImportProcessModule> modules, List<AssetViewItem> items )
+			{
+				m_Modules = modules;
+				m_Items = items;
+			}
+		}
+		
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 		
 		public AuditProfile m_Profile;
@@ -64,7 +76,6 @@ namespace AssetTools
 
 				AssetViewItem active = assetsFolder;
 				
-				// for each module
 				List<IConformObject> conformData = profile.GetConformData( assetPath );
 				bool result = true;
 				for( int i = 0; i < conformData.Count; ++i )
@@ -225,38 +236,141 @@ namespace AssetTools
 
 		protected override void ContextClickedItem( int id )
 		{
-			// TODO allow on a folder
-			AssetViewItem item = FindItem( id, rootItem ) as AssetViewItem;
-			if( item == null || item.conforms )
+			AssetViewItem contextItem = FindItem( id, rootItem ) as AssetViewItem;
+			if( contextItem == null )
+			{
+				Debug.LogError( "ContextMenu on unknown ID" );
 				return;
-			
-			GenericMenu menu = new GenericMenu();
-			object context = item;
+			}
 
+			List<AssetViewItem> selectedItems = new List<AssetViewItem>{ contextItem };
 			for( int i = 0; i < m_SelectedItems.Count; ++i )
 			{
 				if( id == m_SelectedItems[i].id )
 				{
-					context = new List<AssetViewItem>( m_SelectedItems );
+					selectedItems = new List<AssetViewItem>( m_SelectedItems );
 					break;
 				}
 			}
+
+			for( int i = selectedItems.Count - 1; i >= 0; --i )
+			{
+				if( selectedItems[i].conforms )
+					selectedItems.RemoveAt( i );
+			}
+
+			if( selectedItems.Count == 0 )
+				return;
 			
 			// TODO get list of possible selections from modules
-			
-			menu.AddItem( new GUIContent( "Conform to Importer Template Properties" ), false, FixCallbackImporterProperties, context );
+			// TODO only list modules that do not conform
+			GenericMenu menu = new GenericMenu();
+			menu.AddItem( new GUIContent( m_Profile.m_ImporterModule.AssetMenuFixString ), false, ContextMenuSelectionCallback, 
+				new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_ImporterModule }, selectedItems ) );
+			menu.AddItem( new GUIContent( m_Profile.m_PreprocessorModule.AssetMenuFixString ), false, ContextMenuSelectionCallback, 
+				new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_PreprocessorModule }, selectedItems ) );
+			menu.AddItem( new GUIContent( "All" ), false, ContextMenuSelectionCallback, 
+				new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_ImporterModule, m_Profile.m_PreprocessorModule }, selectedItems ) );
 			menu.ShowAsContext();
 		}
 
-		private void FixCallbackAll( object context )
+		private void ContextMenuSelectionCallback( object ctx )
 		{
-			FixCallbackImporterProperties( context );
-		}
+			AssetViewItemMenuContext menuContext = ctx as AssetViewItemMenuContext;
+			if( menuContext == null )
+			{
+				Debug.LogError( "Incorrect context received from AssetViewItem context menu" );
+				return;
+			}
+			
+			List<AssetViewItem> assets = new List<AssetViewItem>();
+			List<AssetViewItem> folders = new List<AssetViewItem>();
+			for( int i = 0; i < menuContext.m_Items.Count; ++i )
+			{
+				if( menuContext.m_Items[i].isAsset == false )
+				{
+					GetAssetItems( menuContext.m_Items[i], assets, folders );
+					if( folders.Contains( menuContext.m_Items[i] ) == false )
+						folders.Add( menuContext.m_Items[i] );
+				}
+				else if( menuContext.m_Items[i].conforms == false && assets.Contains( menuContext.m_Items[i] ) == false )
+					assets.Add( menuContext.m_Items[i] );
+			}
+			
+			List<string> assetPaths = new List<string>(assets.Count);
+			for( int i = 0; i < assets.Count; ++i )
+				assetPaths.Add( assets[i].path );
+			
+			for( int i = 0; i < menuContext.m_Modules.Count; ++i )
+			{
+				if( menuContext.m_Modules[i] == null )
+				{
+					Debug.LogError( "Module became null during window use, report issue" );
+					continue;
+				}
+				
+				menuContext.m_Modules[i].SetManuallyProcessing( assetPaths, true );
+			}
+			
+			AssetDatabase.StartAssetEditing();
+			for( int i=0; i<assets.Count; ++i )
+			{
+				assets[i].ReimportAsset();
+			}
+			AssetDatabase.StopAssetEditing();
 
-		private void FixCallbackImporterProperties( object context )
+			foreach( IImportProcessModule module in menuContext.m_Modules )
+			{
+				Type conformObjectType = module.GetConformObjectType();
+				for( int i = 0; i < assets.Count; ++i )
+				{
+					// TODO confirm that it now conforms, currently just set everything as Conforms
+					foreach( IConformObject data in assets[i].conformData )
+					{
+						if( data.GetType() == conformObjectType )
+							SetConformObjectRecursive( data, true, conformObjectType );
+					}
+				}
+			}
+			
+			for( int i = 0; i < assets.Count; ++i )
+				assets[i].Refresh();
+				
+			for( int i = 0; i < folders.Count; ++i )
+			{
+				if( folders[i].conformData == null )
+				{
+					folders[i].conforms = true;
+					folders[i].Refresh();
+				}
+			}
+				
+			m_PropertyList.Reload();
+		}
+		
+		private void SetConformObjectRecursive( IConformObject obj, bool value, Type restrictToType )
 		{
-			if( m_Profile.m_ImporterModule != null )
-				m_Profile.m_ImporterModule.FixCallback( this, context );
+			obj.Conforms = value;
+			foreach( IConformObject data in obj.SubObjects )
+			{
+				if( data.GetType() == restrictToType )
+					SetConformObjectRecursive( data, value, restrictToType );
+			}
+		}
+		
+		static void GetAssetItems( AssetViewItem item , List<AssetViewItem> assets, List<AssetViewItem> folders )
+		{
+			for( int i = 0; i < item.children.Count; ++i )
+			{
+				AssetViewItem avi = item.children[i] as AssetViewItem;
+				if( avi.isAsset == false && folders.Contains( avi ) == false )
+				{
+					folders.Add( avi );
+					GetAssetItems( avi, assets, folders );
+				}
+				else if( avi.conforms == false && assets.Contains( avi ) == false )
+					assets.Add( avi );
+			}
 		}
 	}
 

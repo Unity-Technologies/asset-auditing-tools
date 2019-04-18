@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace AssetTools
@@ -11,10 +12,18 @@ namespace AssetTools
 		
 		bool IsManuallyProcessing( AssetImporter item );
 		
+		string AssetMenuFixString
+		{
+			get;
+		}
+		
+		void SetManuallyProcessing( List<string> assetPaths, bool value );
+		
 		List<IConformObject> GetConformObjects( string asset, AuditProfile profile );
+		
 		bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths );
-
-		void FixCallback( AssetDetailList calledFromTreeView, object context );
+		
+		System.Type GetConformObjectType();
 		
 		bool Apply( AssetImporter importer, AuditProfile profile );
 	}

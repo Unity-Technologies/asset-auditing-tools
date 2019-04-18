@@ -22,11 +22,16 @@ namespace AssetTools
 			get { return m_MethodString; }
 		}
 		
-		protected override Type GetConformObjectType()
+		public override Type GetConformObjectType()
 		{
 			return typeof(PreprocessorConformObject);
 		}
-		
+
+		public override string AssetMenuFixString
+		{
+			get { return "Import using " + Method.TypeName; }
+		}
+
 		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
 		{
 			// Preprocessor versionCode comparison
