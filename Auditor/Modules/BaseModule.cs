@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AssetTools
 {
 	[System.Serializable]
-	public class BaseModule : IImportProcessModule
+	public abstract class BaseModule : IImportProcessModule
 	{
 		protected List<string> m_AssetsToForceApply = new List<string>();
 		protected string m_SearchFilter;
@@ -33,6 +33,7 @@ namespace AssetTools
 			return true;
 		}
 
+		// TODO split up
 		public virtual void FixCallback( AssetDetailList calledFromTreeView, object context )
 		{
 			List<AssetViewItem> selected = context as List<AssetViewItem>;
@@ -138,10 +139,7 @@ namespace AssetTools
 			}
 		}
 
-		protected virtual Type GetConformObjectType()
-		{
-			return typeof(IConformObject);
-		}
+		protected abstract Type GetConformObjectType();
 		
 		public virtual bool Apply( AssetImporter importer, AuditProfile fromProfile )
 		{
