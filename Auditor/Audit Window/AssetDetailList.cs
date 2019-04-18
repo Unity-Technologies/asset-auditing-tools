@@ -333,16 +333,47 @@ namespace AssetTools
 				}
 			}
 			
+			List<AssetViewItem> checkFoldersForConform = new List<AssetViewItem>();
+
 			for( int i = 0; i < assets.Count; ++i )
+			{
 				assets[i].Refresh();
-				
+				AssetViewItem parent = assets[i].parent as AssetViewItem;
+				if( parent != null & checkFoldersForConform.Contains( parent ) == false )
+					checkFoldersForConform.Add( parent );
+			}
+			
 			for( int i = 0; i < folders.Count; ++i )
 			{
 				if( folders[i].conformData == null )
 				{
 					folders[i].conforms = true;
 					folders[i].Refresh();
+					AssetViewItem parent = folders[i].parent as AssetViewItem;
+					if( parent != null && parent.conforms == false && checkFoldersForConform.Contains( parent ) == false )
+						checkFoldersForConform.Add( parent );
 				}
+			}
+
+			while( checkFoldersForConform.Count > 0 )
+			{
+				bool conforms = true;
+				for( int i = 0; i < checkFoldersForConform[0].children.Count; ++i )
+				{
+					AssetViewItem item = checkFoldersForConform[0].children[i] as AssetViewItem;
+					if( item != null && item.conforms == false )
+						conforms = false;
+				}
+
+				if( conforms )
+				{
+					checkFoldersForConform[0].conforms = true;
+					AssetViewItem parent = checkFoldersForConform[0].parent as AssetViewItem;
+					if( parent != null & checkFoldersForConform.Contains( parent ) == false )
+						checkFoldersForConform.Add( parent );
+				}
+				
+				checkFoldersForConform.RemoveAt( 0 );
 			}
 				
 			m_PropertyList.Reload();
