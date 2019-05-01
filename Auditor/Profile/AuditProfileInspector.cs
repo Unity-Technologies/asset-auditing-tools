@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
+using System;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
 using AssetTools.GUIUtility;
+using UnityEngine.Assertions;
+using Object = System.Object;
 
 namespace AssetTools
 {
@@ -15,21 +18,25 @@ namespace AssetTools
 		private SerializedProperty m_ProcessOnImport;
 		private SerializedProperty m_FolderOnly;
 		private SerializedProperty m_FiltersListProperty;
-		private SerializedProperty m_ImporterModule;
-		private SerializedProperty m_PreprocessorModule;
+		// private SerializedProperty m_ImporterModule;
+		// private SerializedProperty m_PreprocessorModule;
+		private SerializedProperty m_Modules;
 		private SerializedProperty m_SortIndex;
 
-		private ImporterPropertiesModuleInspector propertiesModuleInspector = new ImporterPropertiesModuleInspector();
-		private PreprocessorModuleInspector PreprocessorModuleInspector = new PreprocessorModuleInspector();
+		// private ImporterPropertiesModuleInspector propertiesModuleInspector = new ImporterPropertiesModuleInspector();
+		// private PreprocessorModuleInspector PreprocessorModuleInspector = new PreprocessorModuleInspector();
+		
+		List<Type> m_ModuleTypes;
 
 		void OnEnable()
 		{
 			m_ProcessOnImport = serializedObject.FindProperty("m_RunOnImport" );
 			m_FolderOnly = serializedObject.FindProperty("m_FilterToFolder" );
 			m_FiltersListProperty = serializedObject.FindProperty("m_Filters" );
-			m_ImporterModule = serializedObject.FindProperty("m_ImporterModule" );
-			m_PreprocessorModule = serializedObject.FindProperty("m_PreprocessorModule" );
+			m_Modules = serializedObject.FindProperty("m_Modules" );
 			m_SortIndex = serializedObject.FindProperty("m_SortIndex" );
+			
+			m_ModuleTypes = ProfileCache.GetTypes<BaseModule>();
 		}
 		
 		public override void OnInspectorGUI()
@@ -88,7 +95,6 @@ namespace AssetTools
 				}
 				else
 				{
-					// TODO how do you get properties for this without looping all???
 					SerializedProperty filterProperty = m_FiltersListProperty.GetArrayElementAtIndex( i );
 					filterProperty.NextVisible( true );
 					do
@@ -130,14 +136,59 @@ namespace AssetTools
 
 			layout.Space( 20 );
 			
-			// TODO do the rest as modules that can be added
-			propertiesModuleInspector.Draw( m_ImporterModule, layout );
-			PreprocessorModuleInspector.Draw( m_PreprocessorModule, layout );
+			EditorGUI.LabelField( layout.Get(), "", UnityEngine.GUI.skin.horizontalSlider);
+			
+			size = m_Modules.arraySize;
+			for( int i = 0; i < size; ++i )
+			{
+				SerializedProperty moduleProperty = m_Modules.GetArrayElementAtIndex( i );
+				BaseModule module = moduleProperty.objectReferenceValue as BaseModule;
+				if( module == null )
+					continue;
+				module.DrawGUI( layout );
+			}
+			
+			if( size > 0 )
+				EditorGUI.LabelField( layout.Get(), "", UnityEngine.GUI.skin.horizontalSlider);
+			
+			layoutRect = layout.Get();
+			layoutRect.x = layoutRect.x + (layoutRect.width - 100);
+			layoutRect.width = 100;
+			
+			if (EditorGUI.DropdownButton( layoutRect, new GUIContent("Add Module", "Add new Module to this Definition."), FocusType.Keyboard))
+			{
+				var menu = new GenericMenu();
+				for (int i = 0; i < m_ModuleTypes.Count; i++)
+				{
+					var type = m_ModuleTypes[i];
+					menu.AddItem(new GUIContent(type.Name, ""), false, OnAddModule, type);
+				}
+
+				menu.ShowAsContext();
+			}
 			
 
 			serializedObject.ApplyModifiedProperties();
 		}
 		
+		void OnAddModule(object context)
+		{
+			Type t = context as Type;
+			Assert.IsNotNull( t, "Unknown Module Type" );
+
+			if( !m_Profile.AddModule( t ) )
+				return;
+
+			// if( !m_AddressableAssetGroupTarget.AddSchema( context as Type ) )
+			// 	return;
+
+			//          
+			// var newFoldoutState = new bool[m_AddressableAssetGroupTarget.SchemaObjects.Count];
+			// for (int i = 0; i < m_FoldoutState.Length; i++)
+			// 	newFoldoutState[i] = m_FoldoutState[i];
+			// m_FoldoutState = newFoldoutState;
+			// m_FoldoutState[m_FoldoutState.Length - 1] = true;
+		}
 		
 	}
 }

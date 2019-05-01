@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -8,10 +10,22 @@ using UnityEngine;
 namespace AssetTools
 {
 	[System.Serializable]
-	public abstract class BaseModule : IImportProcessModule
+	public abstract class BaseModule : ScriptableObject, IImportProcessModule
 	{
 		protected List<string> m_AssetsToForceApply = new List<string>();
 		protected string m_SearchFilter;
+		
+		private SerializedObject m_SelfSerializedObject = null;
+
+		protected SerializedObject SelfSerializedObject
+		{
+			get
+			{
+				if( m_SelfSerializedObject == null )
+					m_SelfSerializedObject = new SerializedObject( this );
+				return m_SelfSerializedObject;
+			}
+		}
 
 		public virtual bool CanProcess( AssetImporter item )
 		{
@@ -39,12 +53,27 @@ namespace AssetTools
 				}
 			}
 		}
+		
+		public virtual void DrawGUI( ControlRect layout )
+		{
+			var type = GetType();
+			var so = new SerializedObject(this);
+			var p = so.GetIterator();
+			p.Next(true);
+			while (p.Next(false))
+			{
+				var prop = type.GetField(p.name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+				if(prop != null)
+					EditorGUI.PropertyField(layout.Get(), p, false);
+			}
+			so.ApplyModifiedProperties();
+		}
 
 		public abstract List<IConformObject> GetConformObjects( string asset, AuditProfile profile );
 
-		public virtual bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
+		public virtual bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
 		{
-			typeFilter = m_SearchFilter;
+			searchFilter = m_SearchFilter;
 			return true;
 		}
 

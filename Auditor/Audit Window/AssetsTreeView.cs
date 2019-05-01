@@ -6,14 +6,14 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	public class AssetDetailList : TreeView
+	public class AssetsTreeView : TreeView
 	{
 		private class AssetViewItemMenuContext
 		{
 			public List<IImportProcessModule> m_Modules;
-			public List<AssetViewItem> m_Items;
+			public List<AssetTreeViewItem> m_Items;
 
-			public AssetViewItemMenuContext( List<IImportProcessModule> modules, List<AssetViewItem> items )
+			public AssetViewItemMenuContext( List<IImportProcessModule> modules, List<AssetTreeViewItem> items )
 			{
 				m_Modules = modules;
 				m_Items = items;
@@ -23,10 +23,10 @@ namespace AssetTools
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 		
 		public AuditProfile m_Profile;
-		private readonly List<AssetViewItem> m_SelectedItems = new List<AssetViewItem>();
-		internal PropertyDetailList m_PropertyList;
+		private readonly List<AssetTreeViewItem> m_SelectedItems = new List<AssetTreeViewItem>();
+		internal ModularDetailTreeView m_ModularTreeView;
 
-		public AssetDetailList( TreeViewState state ) : base( state )
+		public AssetsTreeView( TreeViewState state ) : base( state )
 		{
 			showBorder = true;
 		}
@@ -41,7 +41,7 @@ namespace AssetTools
 			if( m_Profile != null )
 				GenerateTreeElements( m_Profile, root );
 			else
-				Debug.LogError( "Must set a Profile before Building the AssetDetailList" );
+				Debug.LogError( "Must set a Profile before Building the AssetsTreeView" );
 			return root;
 		}
 
@@ -57,14 +57,14 @@ namespace AssetTools
 			}
 
 			string activePath = "Assets";
-			AssetViewItem assetsFolder = new AssetViewItem( activePath.GetHashCode(), 0, activePath, true );
-			if( assetsFolder.children == null )
-				assetsFolder.children = new List<TreeViewItem>();
-			root.AddChild( assetsFolder );
+			AssetTreeViewItem assetsTreeFolder = new AssetTreeViewItem( activePath.GetHashCode(), 0, activePath, true );
+			if( assetsTreeFolder.children == null )
+				assetsTreeFolder.children = new List<TreeViewItem>();
+			root.AddChild( assetsTreeFolder );
 
-			Dictionary<int, AssetViewItem> items = new Dictionary<int, AssetViewItem>
+			Dictionary<int, AssetTreeViewItem> items = new Dictionary<int, AssetTreeViewItem>
 			{
-				{activePath.GetHashCode(), assetsFolder}
+				{activePath.GetHashCode(), assetsTreeFolder}
 			};
 
 			foreach( var assetPath in associatedAssets )
@@ -74,7 +74,7 @@ namespace AssetTools
 				var strings = path.Split( new[] {'/'}, StringSplitOptions.None );
 				activePath = "Assets";
 
-				AssetViewItem active = assetsFolder;
+				AssetTreeViewItem active = assetsTreeFolder;
 				
 				List<IConformObject> conformData = profile.GetConformData( assetPath );
 				bool result = true;
@@ -87,8 +87,8 @@ namespace AssetTools
 					}
 				}
 				
-				if( !result && assetsFolder.conforms )
-					assetsFolder.conforms = false;
+				if( !result && assetsTreeFolder.conforms )
+					assetsTreeFolder.conforms = false;
 				
 				AssetImporter assetImporter = AssetImporter.GetAtPath( assetPath );
 				SerializedObject assetImporterSO = new SerializedObject( assetImporter );
@@ -101,7 +101,7 @@ namespace AssetTools
 
 					if( i == strings.Length - 1 )
 					{
-						AssetViewItem item = new AssetViewItem( id, i + 1, strings[i], result )
+						AssetTreeViewItem item = new AssetTreeViewItem( id, i + 1, strings[i], result )
 						{
 							icon = AssetDatabase.GetCachedIcon( assetPath ) as Texture2D,
 							path = activePath,
@@ -117,10 +117,10 @@ namespace AssetTools
 					}
 					else
 					{
-						AssetViewItem item;
+						AssetTreeViewItem item;
 						if( !items.TryGetValue( id, out item ) )
 						{
-							item = new AssetViewItem( id, i + 1, strings[i], result )
+							item = new AssetTreeViewItem( id, i + 1, strings[i], result )
 							{
 								path = activePath,
 								icon = AssetDatabase.GetCachedIcon( activePath ) as Texture2D
@@ -144,12 +144,42 @@ namespace AssetTools
 		{
 			List<string> associatedAssets = new List<string>();
 			List<string> ignorePaths = new List<string>();
-			string typeFilter;
+			string searchFilter;
 
-			// TODO see if there is a way to merge multiple modules? or have to do multiple passes?
-			m_Profile.m_ImporterModule.GetSearchFilter( out typeFilter, ignorePaths );
+			List<string> GUIDs;
+			
+			// TODO this is probably inefficient, profile and see if there is a more efficient design needed
+			if( m_Profile.m_Modules.Count > 0 )
+			{
+				m_Profile.m_Modules[0].GetSearchFilter( out searchFilter, ignorePaths );
+				GUIDs = new List<string>( AssetDatabase.FindAssets( searchFilter ) );
+				
+				for( int i = 1; i < m_Profile.m_Modules.Count; ++i )
+				{
+					m_Profile.m_Modules[i].GetSearchFilter( out searchFilter, ignorePaths );
+					string[] moduleGUIDs = AssetDatabase.FindAssets( searchFilter );
+					for( int m = GUIDs.Count - 1; m >= 0; --m )
+					{
+						bool guidInModule = false;
+						foreach( string moduleGuiD in moduleGUIDs )
+						{
+							if( GUIDs[m] == moduleGuiD )
+							{
+								guidInModule = true;
+								break;
+							}
+						}
+						if( guidInModule == false )
+							GUIDs.RemoveAt( m );
+					}
+				}
+			}
+			else
+			{
+				GUIDs = new List<string>( AssetDatabase.FindAssets( "" ) );
+			}
 
-			string[] GUIDs = AssetDatabase.FindAssets( typeFilter );
+			//string[] GUIDs = AssetDatabase.FindAssets( typeFilter );
 			foreach( var assetGUID in GUIDs )
 			{
 				string assetPath = AssetDatabase.GUIDToAssetPath( assetGUID );
@@ -167,7 +197,7 @@ namespace AssetTools
 
 		protected override void RowGUI( RowGUIArgs args )
 		{
-			AssetViewItem item = args.item as AssetViewItem;
+			AssetTreeViewItem item = args.item as AssetTreeViewItem;
 			if( item != null )
 			{
 				float num = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
@@ -213,20 +243,20 @@ namespace AssetTools
 
 			for( int i = 0; i < selectedIds.Count; ++i )
 			{
-				AssetViewItem item = FindItem( selectedIds[i], rootItem ) as AssetViewItem;
+				AssetTreeViewItem item = FindItem( selectedIds[i], rootItem ) as AssetTreeViewItem;
 				if( item != null )
 				{
 					m_SelectedItems.Add( item );
 				}
 			}
 			
-			m_PropertyList.SetSelection( m_SelectedItems );
+			m_ModularTreeView.SetSelection( m_SelectedItems );
 		}
 		
 		protected override void DoubleClickedItem( int id )
 		{
 			base.DoubleClickedItem( id );
-			AssetViewItem pathItem = FindItem( id, rootItem ) as AssetViewItem;
+			AssetTreeViewItem pathItem = FindItem( id, rootItem ) as AssetTreeViewItem;
 			if( pathItem == null )
 				return;
 			
@@ -236,19 +266,19 @@ namespace AssetTools
 
 		protected override void ContextClickedItem( int id )
 		{
-			AssetViewItem contextItem = FindItem( id, rootItem ) as AssetViewItem;
+			AssetTreeViewItem contextItem = FindItem( id, rootItem ) as AssetTreeViewItem;
 			if( contextItem == null )
 			{
 				Debug.LogError( "ContextMenu on unknown ID" );
 				return;
 			}
 
-			List<AssetViewItem> selectedItems = new List<AssetViewItem>{ contextItem };
+			List<AssetTreeViewItem> selectedItems = new List<AssetTreeViewItem>{ contextItem };
 			for( int i = 0; i < m_SelectedItems.Count; ++i )
 			{
 				if( id == m_SelectedItems[i].id )
 				{
-					selectedItems = new List<AssetViewItem>( m_SelectedItems );
+					selectedItems = new List<AssetTreeViewItem>( m_SelectedItems );
 					break;
 				}
 			}
@@ -279,12 +309,12 @@ namespace AssetTools
 			AssetViewItemMenuContext menuContext = ctx as AssetViewItemMenuContext;
 			if( menuContext == null )
 			{
-				Debug.LogError( "Incorrect context received from AssetViewItem context menu" );
+				Debug.LogError( "Incorrect context received from AssetTreeViewItem context menu" );
 				return;
 			}
 			
-			List<AssetViewItem> assets = new List<AssetViewItem>();
-			List<AssetViewItem> folders = new List<AssetViewItem>();
+			List<AssetTreeViewItem> assets = new List<AssetTreeViewItem>();
+			List<AssetTreeViewItem> folders = new List<AssetTreeViewItem>();
 			for( int i = 0; i < menuContext.m_Items.Count; ++i )
 			{
 				if( menuContext.m_Items[i].isAsset == false )
@@ -333,12 +363,12 @@ namespace AssetTools
 				}
 			}
 			
-			List<AssetViewItem> checkFoldersForConform = new List<AssetViewItem>();
+			List<AssetTreeViewItem> checkFoldersForConform = new List<AssetTreeViewItem>();
 
 			for( int i = 0; i < assets.Count; ++i )
 			{
 				assets[i].Refresh();
-				AssetViewItem parent = assets[i].parent as AssetViewItem;
+				AssetTreeViewItem parent = assets[i].parent as AssetTreeViewItem;
 				if( parent != null & checkFoldersForConform.Contains( parent ) == false )
 					checkFoldersForConform.Add( parent );
 			}
@@ -349,7 +379,7 @@ namespace AssetTools
 				{
 					folders[i].conforms = true;
 					folders[i].Refresh();
-					AssetViewItem parent = folders[i].parent as AssetViewItem;
+					AssetTreeViewItem parent = folders[i].parent as AssetTreeViewItem;
 					if( parent != null && parent.conforms == false && checkFoldersForConform.Contains( parent ) == false )
 						checkFoldersForConform.Add( parent );
 				}
@@ -360,7 +390,7 @@ namespace AssetTools
 				bool conforms = true;
 				for( int i = 0; i < checkFoldersForConform[0].children.Count; ++i )
 				{
-					AssetViewItem item = checkFoldersForConform[0].children[i] as AssetViewItem;
+					AssetTreeViewItem item = checkFoldersForConform[0].children[i] as AssetTreeViewItem;
 					if( item != null && item.conforms == false )
 						conforms = false;
 				}
@@ -368,7 +398,7 @@ namespace AssetTools
 				if( conforms )
 				{
 					checkFoldersForConform[0].conforms = true;
-					AssetViewItem parent = checkFoldersForConform[0].parent as AssetViewItem;
+					AssetTreeViewItem parent = checkFoldersForConform[0].parent as AssetTreeViewItem;
 					if( parent != null & checkFoldersForConform.Contains( parent ) == false )
 						checkFoldersForConform.Add( parent );
 				}
@@ -376,7 +406,7 @@ namespace AssetTools
 				checkFoldersForConform.RemoveAt( 0 );
 			}
 				
-			m_PropertyList.Reload();
+			m_ModularTreeView.Reload();
 		}
 		
 		private void SetConformObjectRecursive( IConformObject obj, bool value, Type restrictToType )
@@ -389,11 +419,11 @@ namespace AssetTools
 			}
 		}
 		
-		static void GetAssetItems( AssetViewItem item , List<AssetViewItem> assets, List<AssetViewItem> folders )
+		static void GetAssetItems( AssetTreeViewItem item , List<AssetTreeViewItem> assets, List<AssetTreeViewItem> folders )
 		{
 			for( int i = 0; i < item.children.Count; ++i )
 			{
-				AssetViewItem avi = item.children[i] as AssetViewItem;
+				AssetTreeViewItem avi = item.children[i] as AssetTreeViewItem;
 				if( avi.isAsset == false && folders.Contains( avi ) == false )
 				{
 					folders.Add( avi );

@@ -22,7 +22,7 @@ namespace AssetTools
 			Extension,
 			AssetBundleName,
 			FileSize,
-			ImportType,
+			ImporterType,
 			// TODO remove labels??
 			Labels // Labels are a bad use-case if doing Preprocessors step - They cannot be obtained until after the import. It is possible to read the meta file. But if it is not Text based or formatting changes it could run into trouble
 
@@ -170,6 +170,10 @@ namespace AssetTools
                                 return true;
 						}
 
+						break;
+					case ConditionTarget.ImporterType:
+						if( !Target( importer.GetType().Name, filters[i] ) )
+							return false;
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();

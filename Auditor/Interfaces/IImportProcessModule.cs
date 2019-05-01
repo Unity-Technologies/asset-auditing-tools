@@ -21,7 +21,7 @@ namespace AssetTools
 		
 		List<IConformObject> GetConformObjects( string asset, AuditProfile profile );
 		
-		bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths );
+		bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths );
 		
 		System.Type GetConformObjectType();
 		

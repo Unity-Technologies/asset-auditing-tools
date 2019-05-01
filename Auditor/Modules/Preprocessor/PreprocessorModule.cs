@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
 
@@ -16,6 +17,9 @@ namespace AssetTools
 		
 		[SerializeField] private string m_MethodString;
 		[SerializeField] private string m_Data;
+
+		private PreprocessorModuleInspector m_Inspector = null;
+		internal ProcessorMethodInfo m_ProcessorMethodInfo;
 		
 		public string methodString
 		{
@@ -100,9 +104,7 @@ namespace AssetTools
 			}
 			return false;
 		}
-
-		internal ProcessorMethodInfo m_ProcessorMethodInfo;
-
+		
 		private ProcessorMethodInfo Method
 		{
 			get
@@ -149,6 +151,15 @@ namespace AssetTools
 				assemblyName = "";
 				typeString = m_MethodString;
 			}
+		}
+		
+		public override void DrawGUI( ControlRect layout )
+		{
+			if( m_Inspector == null )
+				m_Inspector = new PreprocessorModuleInspector();
+			
+			m_Inspector.Draw( SelfSerializedObject, layout );
+			SelfSerializedObject.ApplyModifiedProperties();
 		}
 	}
 }

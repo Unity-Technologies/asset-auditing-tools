@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
 
@@ -23,6 +24,8 @@ namespace AssetTools
 		private int m_HasProperties = 0;
 		
 		internal AssetImporter m_AssetImporter;
+		
+		private ImporterPropertiesModuleInspector m_Inspector = null;
 		
 		public override Type GetConformObjectType()
 		{
@@ -56,8 +59,6 @@ namespace AssetTools
 			//throw new IndexOutOfRangeException( string.Format( "ReferenceAssetImporter {0}, not a supported Type", a.GetType().Name ) );
 			return AssetType.Native;
 		}
-
-		
 		
 		private AssetImporter GetAssetImporter()
 		{
@@ -106,21 +107,21 @@ namespace AssetTools
 			return true;
 		}
 		
-		public override bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
+		public override bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
 		{
-			typeFilter = null;
+			searchFilter = null;
 			if( m_ImporterReference != null )
 			{
 				switch( GetAssetType() )
 				{
 					case AssetType.Texture:
-						typeFilter = "t:Texture";
+						searchFilter = "t:Texture";
 						break;
 					case AssetType.Model:
-						typeFilter = "t:GameObject";
+						searchFilter = "t:GameObject";
 						break;
 					case AssetType.Audio:
-						typeFilter = "t:AudioClip";
+						searchFilter = "t:AudioClip";
 						break;
 					case AssetType.Folder:
 						break;
@@ -354,6 +355,15 @@ namespace AssetTools
 			
 			if( ! affectedAssetImporterSO.ApplyModifiedProperties() )
 				Debug.LogError( "copy failed" );
+		}
+		
+		public override void DrawGUI( ControlRect layout )
+		{
+			if( m_Inspector == null )
+				m_Inspector = new ImporterPropertiesModuleInspector();
+			
+			m_Inspector.Draw( SelfSerializedObject, layout );
+			SelfSerializedObject.ApplyModifiedProperties();
 		}
 	}
 }

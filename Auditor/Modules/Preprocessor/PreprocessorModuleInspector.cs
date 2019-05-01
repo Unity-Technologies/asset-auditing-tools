@@ -12,23 +12,22 @@ namespace AssetTools
 		private SerializedProperty m_MethodSerializedProperty;
 		private SerializedProperty m_DataSerializedProperty;
 
-		public void Draw( SerializedProperty property, ControlRect layout )
+		public void Draw( SerializedObject moduleObject, ControlRect layout )
 		{
-			
 			if( m_Module == null )
 			{
-				AuditProfile profile = property.serializedObject.targetObject as AuditProfile;
-				if( profile == null )
+				m_Module = moduleObject.targetObject as PreprocessorModule;
+				if( m_Module == null )
 				{
-					Debug.LogError( "PreprocessorModule must be apart of a profile Object" );
+					Debug.LogError( "SerializedObject must be of type PreprocessorModule" );
 					return;
 				}
-				m_Module = profile.m_PreprocessorModule;
 			}
+			
 			if( m_MethodSerializedProperty == null || m_DataSerializedProperty == null )
 			{
 				List<string> propertyNames = new List<string> {"m_MethodString", "m_Data"};
-				List<SerializedProperty> properties = SerializationUtilities.FindPropertiesInClass( property, propertyNames );
+				List<SerializedProperty> properties = SerializationUtilities.GetSerialisedPropertyCopiesForObject( moduleObject, propertyNames );
 				m_MethodSerializedProperty = properties[0];
 				m_DataSerializedProperty = properties[1];
 				if( m_MethodSerializedProperty == null || m_DataSerializedProperty == null )
@@ -77,6 +76,5 @@ namespace AssetTools
 
 			EditorGUI.PropertyField( layout.Get(), m_DataSerializedProperty );
 		}
-
 	}
 }

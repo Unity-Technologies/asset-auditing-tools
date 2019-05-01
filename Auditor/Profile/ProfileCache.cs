@@ -127,5 +127,82 @@ namespace AssetTools
 				}
 			}
 		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/// <summary>
+        /// Get all types that can be assigned to type T
+        /// </summary>
+        /// <typeparam name="T">The class type to use as the base class or interface for all found types.</typeparam>
+        /// <returns>A list of types that are assignable to type T.  The results are cached.</returns>
+        public static List<Type> GetTypes<T>()
+        {
+            return TypeManager<T>.Types;
+        }
+
+        /// <summary>
+        /// Get all types that can be assigned to type rootType.
+        /// </summary>
+        /// <param name="rootType">The class type to use as the base class or interface for all found types.</param>
+        /// <returns>A list of types that are assignable to type T.  The results are not cached.</returns>
+        public static List<Type> GetTypes(Type rootType)
+        {
+            return TypeManager.GetManagerTypes(rootType);
+        }
+
+        class TypeManager
+        {
+            public static List<Type> GetManagerTypes(Type rootType)
+            {
+                var types = new List<Type>();
+                try
+                {
+                    foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+#if NET_4_6
+                                if (a.IsDynamic)
+                                    continue;
+                                foreach (var t in a.ExportedTypes)
+#else
+                        foreach (var t in a.GetExportedTypes())
+#endif
+                        {
+                            if (t != rootType && rootType.IsAssignableFrom(t) && !t.IsAbstract)
+                                types.Add(t);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+
+                return types;
+            }
+        }
+
+        class TypeManager<T> : TypeManager
+        {
+            // ReSharper disable once StaticMemberInGenericType
+            static List<Type> s_Types;
+            public static List<Type> Types
+            {
+                get
+                {
+                    if (s_Types == null)
+                        s_Types = GetManagerTypes(typeof(T));
+
+                    return s_Types;
+                }
+            }
+        }
 	}
 }

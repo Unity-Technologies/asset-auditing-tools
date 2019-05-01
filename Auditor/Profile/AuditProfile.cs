@@ -29,6 +29,8 @@ namespace AssetTools
 		public ImporterPropertiesModule m_ImporterModule;
 		public PreprocessorModule m_PreprocessorModule;
 
+		public List<BaseModule> m_Modules = new List<BaseModule>();
+
 		private string m_DirectoryPath = null;
 
 		internal string DirectoryPath
@@ -44,9 +46,10 @@ namespace AssetTools
 
 		public List<IConformObject> GetConformData( string asset )
 		{
-			List<IConformObject> lst = m_ImporterModule.GetConformObjects( asset, this );
-			lst.AddRange( m_PreprocessorModule.GetConformObjects( asset, this ) );
-			return lst;
+			return new List<IConformObject>();
+			// List<IConformObject> lst = m_ImporterModule.GetConformObjects( asset, this );
+			// lst.AddRange( m_PreprocessorModule.GetConformObjects( asset, this ) );
+			// return lst;
 		}
 
 		public void ProcessAsset( AssetImporter asset, bool checkForConformity = true )
@@ -66,16 +69,73 @@ namespace AssetTools
 
 			if( m_RunOnImport )
 			{
-				m_ImporterModule.Apply( asset, this );
-				m_PreprocessorModule.Apply( asset, this );
+				// m_ImporterModule.Apply( asset, this );
+				// m_PreprocessorModule.Apply( asset, this );
+
+				for( int i = 0; i < m_Modules.Count; ++i )
+				{
+					if( m_Modules[i] != null )
+						m_Modules[i].Apply( asset, this );
+				}
 			}
 			else
 			{
-				if( m_ImporterModule.IsManuallyProcessing( asset ) )
-					m_ImporterModule.Apply( asset, this );
-				if( m_PreprocessorModule.IsManuallyProcessing( asset ) )
-					m_PreprocessorModule.Apply( asset, this );
+				for( int i = 0; i < m_Modules.Count; ++i )
+				{
+					if( m_Modules[i] != null && m_Modules[i].IsManuallyProcessing( asset ))
+						m_Modules[i].Apply( asset, this );
+				}
+				//
+				// if( m_ImporterModule.IsManuallyProcessing( asset ) )
+				// 	m_ImporterModule.Apply( asset, this );
+				// if( m_PreprocessorModule.IsManuallyProcessing( asset ) )
+				// 	m_PreprocessorModule.Apply( asset, this );
 			}
+		}
+		
+		public bool AddModule( Type type )
+		{
+			if (type == null)
+			{
+				Debug.LogWarning("Cannot remove schema with null type.");
+				return false;
+			}
+			if (!typeof(BaseModule).IsAssignableFrom(type))
+			{
+				Debug.LogWarningFormat("Invalid Schema type {0}. Schemas must inherit from AddressableAssetGroupSchema.", type.FullName);
+				return false;
+			}
+            
+			foreach( BaseModule moduleObject in m_Modules )
+			{
+				if( moduleObject.GetType() == type )
+				{
+					Debug.LogError( "Module already exists" );
+					return false;
+				}
+			}
+
+			BaseModule moduleInstance = (BaseModule)CreateInstance( type );
+			if( moduleInstance != null )
+			{
+				moduleInstance.name = type.Name;
+				try
+				{
+					//moduleInstance.hideFlags |= HideFlags.HideInHierarchy;
+					AssetDatabase.AddObjectToAsset( moduleInstance, this );
+				}
+				catch( Exception e )
+				{
+					Console.WriteLine( e );
+					throw;
+				}
+				m_Modules.Add( moduleInstance );
+                
+				EditorUtility.SetDirty( this );
+				AssetDatabase.SaveAssets();
+			}
+
+			return moduleInstance != null;
 		}
 
 		public int CompareTo( AuditProfile other )

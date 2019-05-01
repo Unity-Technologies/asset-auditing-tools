@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	internal class AssetViewItem : TreeViewItem
+	internal class AssetTreeViewItem : TreeViewItem
 	{
 		internal bool conforms { get; set; }
 
@@ -27,7 +27,7 @@ namespace AssetTools
 			}
 		}
 
-		internal AssetViewItem( int id, int depth, string displayName, bool assetConforms ) : base( id, depth, displayName )
+		internal AssetTreeViewItem( int id, int depth, string displayName, bool assetConforms ) : base( id, depth, displayName )
 		{
 			conforms = assetConforms;
 		}
