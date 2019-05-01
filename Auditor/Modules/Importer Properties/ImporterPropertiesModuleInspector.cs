@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Reflection;
 using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
@@ -8,45 +9,42 @@ namespace AssetTools
 {
 	public class ImporterPropertiesModuleInspector
 	{
-		// TODO constructor to setup
+		// TODO constructor to setup << why did I add this?
 		
 		private ImporterPropertiesModule m_Module;
 		
 		private SerializedProperty m_ImporterReferenceSerializedProperty;
-		private SerializedProperty m_PropertiesArraySerializedProperty;
+		private SerializedProperty m_ConstrainPropertiesSerializedProperty;
 		
 		
-		public void Draw( SerializedProperty property, ControlRect layout )
+		public void Draw( SerializedObject moduleObject, ControlRect layout )
 		{
-			if( m_ImporterReferenceSerializedProperty == null || m_PropertiesArraySerializedProperty == null )
+			if( m_Module == null )
 			{
-				List<string> propertyNames = new List<string> {"m_ImporterReference", "m_ConstrainProperties"};
-				List<SerializedProperty> properties = SerializationUtilities.FindPropertiesInClass( property, propertyNames );
-				m_ImporterReferenceSerializedProperty = properties[0];
-				m_PropertiesArraySerializedProperty = properties[1];
-				if( m_ImporterReferenceSerializedProperty == null || m_PropertiesArraySerializedProperty == null )
+				m_Module = moduleObject.targetObject as ImporterPropertiesModule;
+				if( m_Module == null )
+				{
+					Debug.LogError( "SerializedObject must be of type ImporterPropertiesModule" );
+					return;
+				}
+			}
+			
+			if( m_ImporterReferenceSerializedProperty == null || m_ConstrainPropertiesSerializedProperty == null )
+			{
+				m_ImporterReferenceSerializedProperty = moduleObject.FindProperty( "m_ImporterReference" );
+				m_ConstrainPropertiesSerializedProperty = moduleObject.FindProperty( "m_ConstrainProperties" );
+				if( m_ImporterReferenceSerializedProperty == null || m_ConstrainPropertiesSerializedProperty == null )
 				{
 					Debug.LogError( "Invalid properties for ImporterPropertiesModule" );
 					return;
 				}
 			}
 			
-			if( m_Module == null )
-			{
-				AuditProfile profile = property.serializedObject.targetObject as AuditProfile;
-				if( profile == null )
-				{
-					Debug.LogError( "ImporterPropertiesModule must be apart of a profile Object" );
-					return;
-				}
-				m_Module = profile.m_ImporterModule;
-			}
-
 			if( m_ImporterReferenceSerializedProperty != null )
 			{
 				using( var check = new EditorGUI.ChangeCheckScope() )
 				{
-					EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Importer Template" ) );
+					EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Importer Template" ), false );
 					if( check.changed )
 					{
 						m_Module.m_AssetImporter = null;
@@ -56,7 +54,9 @@ namespace AssetTools
 			}
 			
 			if( m_ImporterReferenceSerializedProperty.objectReferenceValue != null )
+			{
 				ConstrainToPropertiesArea( layout );
+			}
 			else
 			{
 				Rect r = layout.Get( 25 );
@@ -94,6 +94,11 @@ namespace AssetTools
 				GenericMenu menu = new GenericMenu();
 				foreach( string propertyName in propertyNamesForReference )
 				{
+					// we do not want UserData to be included. We are required to use this in order to save information about
+					// how the Asset is imported, to generate a different hash for the cache server
+					if( propertyName.Contains( "m_UserData" ) )
+						continue;
+					
 					bool isPropertySelected = m_Module.m_ConstrainProperties.Contains( propertyName );
 					string propertyDisplayName = m_Module.GetPropertyDisplayName( propertyName );
 					menu.AddItem( new GUIContent( propertyDisplayName ), isPropertySelected, TogglePropertyConstraintSelected, propertyDisplayName );
@@ -112,13 +117,13 @@ namespace AssetTools
 			{
 				if( m_Module.m_ConstrainPropertiesDisplayNames[i].Equals( propertyName ) )
 				{
-					m_PropertiesArraySerializedProperty.DeleteArrayElementAtIndex( i );
+					m_ConstrainPropertiesSerializedProperty.DeleteArrayElementAtIndex( i );
 					return;
 				}
 			}
 			
-			m_PropertiesArraySerializedProperty.arraySize += 1;
-			m_PropertiesArraySerializedProperty.GetArrayElementAtIndex( m_PropertiesArraySerializedProperty.arraySize-1 ).stringValue = m_Module.GetPropertyRealName( propertyName ) ;
+			m_ConstrainPropertiesSerializedProperty.arraySize += 1;
+			m_ConstrainPropertiesSerializedProperty.GetArrayElementAtIndex( m_ConstrainPropertiesSerializedProperty.arraySize-1 ).stringValue = m_Module.GetPropertyRealName( propertyName ) ;
 			m_Module.GatherDisplayNames();
 		}
 

@@ -9,10 +9,10 @@ namespace AssetTools
 	public class AuditWindow : EditorWindow
 	{
 		private TreeViewState m_AssetListState;
-		private AssetDetailList m_AssetList;
+		private AssetsTreeView m_AssetList;
 
 		private TreeViewState m_PropertyListState;
-		internal PropertyDetailList m_PropertyList;
+		private ModularDetailTreeView m_ModularTreeView;
 		
 		private List<AuditProfile> profiles;
 		private List<string> profileNames;
@@ -87,7 +87,7 @@ namespace AssetTools
 				selection = m_AssetList.GetSelection();
 			}
 			
-			m_AssetList = new AssetDetailList( m_AssetListState );
+			m_AssetList = new AssetsTreeView( m_AssetListState );
 			if( profiles.Count > 0 && selected < profiles.Count )
 				m_AssetList.m_Profile = profiles[selected];
 			m_AssetList.Reload();
@@ -95,9 +95,9 @@ namespace AssetTools
 			if( m_PropertyListState == null )
 				m_PropertyListState = new TreeViewState();
 			
-			m_PropertyList = new PropertyDetailList( m_PropertyListState );
-			m_AssetList.m_PropertyList = m_PropertyList;
-			m_PropertyList.Reload();
+			m_ModularTreeView = new ModularDetailTreeView( m_PropertyListState );
+			m_AssetList.m_ModularTreeView = m_ModularTreeView;
+			m_ModularTreeView.Reload();
 
 			if( selection != null )
 			{
@@ -136,7 +136,7 @@ namespace AssetTools
 				//m_FixAction = FixCallback;
 			}
 
-			if( m_AssetList == null || m_PropertyList == null )
+			if( m_AssetList == null || m_ModularTreeView == null )
 			{
 				RefreshData();
 			}
@@ -155,7 +155,7 @@ namespace AssetTools
 			
 			listY = (int)(position.height * m_SplitterPercent) + 3;
 			float h = position.height - listY;
-			m_PropertyList.OnGUI( new Rect( 0, listY, position.width, h ) );
+			m_ModularTreeView.OnGUI( new Rect( 0, listY, position.width, h ) );
 			
 			if( m_ResizingSplitter )
 				Repaint();
@@ -234,7 +234,7 @@ namespace AssetTools
 	
 	internal static class SearchField
 	{
-		static class Styles
+		private static class Styles
 		{
 			public static readonly GUIStyle searchField = "SearchTextField";
 			public static readonly GUIStyle searchFieldCancelButton = "SearchCancelButton";

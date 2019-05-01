@@ -1,19 +1,14 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using AssetTools.GUIUtility;
 using UnityEditor;
 using UnityEngine;
 
 namespace AssetTools
 {
-	/// <summary>
-	/// TODO test this
-	/// will this work for just any SerialisedObject, like ScriptableObject??
-	/// SerialisedPropertiesModule
-	/// </summary>
-	
 	[System.Serializable]
-	public class ImporterPropertiesModule : IImportProcessModule
+	public class ImporterPropertiesModule : BaseModule
 	{
 		public UnityEngine.Object m_ImporterReference = null;
 		
@@ -23,7 +18,6 @@ namespace AssetTools
 #endif
 		
 		public List<string> m_ConstrainProperties = new List<string>();
-		
 
 		[NonSerialized] public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
 		[NonSerialized] public List<SerializedProperty> m_SerialisedProperties = new List<SerializedProperty>();
@@ -31,6 +25,17 @@ namespace AssetTools
 		
 		internal AssetImporter m_AssetImporter;
 		
+		private ImporterPropertiesModuleInspector m_Inspector = null;
+		
+		public override Type GetConformObjectType()
+		{
+			return typeof(PropertyConformObject);
+		}
+		
+		public override string AssetMenuFixString
+		{
+			get { return "Conform to Importer Template Properties"; }
+		}
 		
 		private AssetType GetAssetType()
 		{
@@ -54,8 +59,6 @@ namespace AssetTools
 			//throw new IndexOutOfRangeException( string.Format( "ReferenceAssetImporter {0}, not a supported Type", a.GetType().Name ) );
 			return AssetType.Native;
 		}
-
-		
 		
 		private AssetImporter GetAssetImporter()
 		{
@@ -82,21 +85,43 @@ namespace AssetTools
 			}
 		}
 		
-		public bool GetSearchFilter( out string typeFilter, List<string> ignoreAssetPaths )
+		public override bool CanProcess( AssetImporter item )
 		{
-			typeFilter = null;
+			if( m_ImporterReference == null )
+				return false;
+			if( ReferenceAssetImporter == item )
+				return false;
+			
+			Type t = item.GetType();
+			Type it = ReferenceAssetImporter.GetType();
+			if( t != it )
+				return false;
+			
+			if( m_AssetsToForceApply.Contains( item.assetPath ) )
+				return true;
+			
+			// TODO do checks to make sure it is valid
+			
+			// 
+			
+			return true;
+		}
+		
+		public override bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
+		{
+			searchFilter = null;
 			if( m_ImporterReference != null )
 			{
 				switch( GetAssetType() )
 				{
 					case AssetType.Texture:
-						typeFilter = "t:Texture";
+						searchFilter = "t:Texture";
 						break;
 					case AssetType.Model:
-						typeFilter = "t:GameObject";
+						searchFilter = "t:GameObject";
 						break;
 					case AssetType.Audio:
-						typeFilter = "t:AudioClip";
+						searchFilter = "t:AudioClip";
 						break;
 					case AssetType.Folder:
 						break;
@@ -111,6 +136,38 @@ namespace AssetTools
 			}
 
 			return false;
+		}
+		
+		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
+		{
+			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
+			if( m_ImporterReference == null )
+				return new List<IConformObject>(0);
+			
+			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
+			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
+			
+			// TODO if there are any. check to make sure these are valid constraints, if not, don't include them in the count 
+			if( m_ConstrainProperties.Count == 0 )
+			{
+				return CompareSerializedObject( profileImporterSO, assetImporterSO );
+			}
+			
+			List<IConformObject> infos = new List<IConformObject>();
+			
+			for( int i = 0; i < m_ConstrainProperties.Count; ++i )
+			{
+				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( m_ConstrainProperties[i] );
+				if( assetRuleSP == null )
+					continue; // could be properties from another Object
+				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( m_ConstrainProperties[i] );
+
+				PropertyConformObject conformObject = new PropertyConformObject( m_ConstrainProperties[i] );
+				conformObject.SetSerializedProperties( assetRuleSP, foundAssetSP );
+				infos.Add( conformObject );
+			}
+
+			return infos;
 		}
 
 		internal void AddProperty( string propName, bool isRealName = true )
@@ -143,7 +200,7 @@ namespace AssetTools
 			}
 		}
 
-		internal void RemoveProperty( int i )
+		private void RemoveProperty( int i )
 		{
 			GatherPropertiesIfNeeded();
 
@@ -191,6 +248,7 @@ namespace AssetTools
 			if( m_HasProperties == 0 || m_ConstrainProperties.Count != m_ConstrainPropertiesDisplayNames.Count )
 				GatherProperties();
 		}
+		
 		internal void GatherProperties()
 		{
 			if( m_ImporterReference == null )
@@ -216,7 +274,7 @@ namespace AssetTools
 
 			GatherDisplayNames();
 			
-			// TODO check if properties exist in active importer
+			// TODO check if properties exist in active m_Importer
 			
 
 			m_HasProperties = m_ConstrainProperties.Count > 0 ? 1 : -1;
@@ -235,96 +293,56 @@ namespace AssetTools
 					m_ConstrainPropertiesDisplayNames[i] = property.displayName;
 			}
 		}
-		
-		public List<IConformObject> GetConformObjects( string asset )
+
+		private static List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
 		{
-			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
-			if( m_ImporterReference == null )
-				return new List<IConformObject>(0);
-			
-			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
-			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
-			
-			// TODO check to make sure these are valid constraints
-			if( m_ConstrainProperties.Count == 0 )
-			{
-				return CompareSerializedObject( profileImporterSO, assetImporterSO );
-			}
-			
-			List<IConformObject> infos = new List<IConformObject>();
-			
-			for( int i = 0; i < m_ConstrainProperties.Count; ++i )
-			{
-				string propertyName = m_ConstrainProperties[i];
-				
-				SerializedProperty assetRuleSP = profileImporterSO.FindProperty( propertyName );
-				if( assetRuleSP == null )
-					continue; // could be properties from another Object
-				SerializedProperty foundAssetSP = assetImporterSO.FindProperty( propertyName );
-
-				PropertyConformObject conformObject = new PropertyConformObject( propertyName );
-				conformObject.SetSerializedProperties( assetRuleSP, foundAssetSP );
-				infos.Add( conformObject );
-			}
-
-			return infos;
-		}
-
-		private List<IConformObject> CompareSerializedObject( SerializedObject template, SerializedObject asset )
-		{
-			SerializedProperty ruleIter = template.GetIterator();
+			SerializedProperty templateIter = template.GetIterator();
 			SerializedProperty assetIter = asset.GetIterator();
 			assetIter.NextVisible( true );
-			ruleIter.NextVisible( true );
+			templateIter.NextVisible( true );
 			
 			List<IConformObject> infos = new List<IConformObject>();
 
 			do
 			{
-				PropertyConformObject conformObject = new PropertyConformObject( ruleIter.name );
-				// TODO better way to do this? could use utility method to get all properties in one loop
-				conformObject.SetSerializedProperties( template.FindProperty( ruleIter.name ), asset.FindProperty( assetIter.name ) );
+				if( assetIter.name == "m_UserData" )
+				{
+					templateIter.NextVisible( false );
+					continue;
+				}
+				
+				// TODO better way to do this? could use utility method to get all properties in one loop?? (this may not work, NextVisible will not work this way)
+				PropertyConformObject conformObject = new PropertyConformObject( templateIter.name );
+				conformObject.SetSerializedProperties( template.FindProperty( templateIter.name ), asset.FindProperty( assetIter.name ) );
 				infos.Add( conformObject );
-				ruleIter.NextVisible( false );
+				
+				templateIter.NextVisible( false );
 			} while( assetIter.NextVisible( false ) );
 
 			return infos;
 		}
 		
-		public void FixCallback( AssetDetailList calledFromTreeView, object context )
+		public override bool Apply( AssetImporter importer, AuditProfile fromProfile )
 		{
-			// TODO find out how to multi select
-			// TODO if selection is a folder
+			if( CanProcess( importer ) == false )
+				return false;
 			
-			AssetViewItem selectedNodes = context as AssetViewItem;
-			if( selectedNodes != null )
-			{
-				CopyProperties( selectedNodes );
-				foreach( IConformObject data in selectedNodes.conformData )
-				{
-					data.Conforms = true;
-				}
-				calledFromTreeView.m_PropertyList.Reload();
-			}
-			else
-				Debug.LogError( "Could not fix Asset with no Assets selected." );
-		}
-		
-		private void CopyProperties( AssetViewItem item )
-		{
 			if( m_ConstrainProperties.Count > 0 )
 			{
 				SerializedObject profileSerializedObject = new SerializedObject( ReferenceAssetImporter );
-				SerializedObject assetImporterSO = new SerializedObject( item.AssetImporter );
+				SerializedObject assetImporterSO = new SerializedObject( importer );
 				CopyConstrainedProperties( assetImporterSO, profileSerializedObject );
 			}
 			else
 			{
-				EditorUtility.CopySerialized( ReferenceAssetImporter, item.AssetImporter );
+				// we need to maintain userData in order to have cache hash valid for selective Postprocessing features
+				string ud = importer.userData;
+				EditorUtility.CopySerialized( ReferenceAssetImporter, importer );
+				importer.userData = ud;
 			}
 
-			item.conforms = true;
-			item.ReimportAsset();
+			m_AssetsToForceApply.Remove( importer.assetPath );
+			return true;
 		}
 		
 		private void CopyConstrainedProperties( SerializedObject affectedAssetImporterSO, SerializedObject templateImporterSO )
@@ -337,6 +355,15 @@ namespace AssetTools
 			
 			if( ! affectedAssetImporterSO.ApplyModifiedProperties() )
 				Debug.LogError( "copy failed" );
+		}
+		
+		public override void DrawGUI( ControlRect layout )
+		{
+			if( m_Inspector == null )
+				m_Inspector = new ImporterPropertiesModuleInspector();
+			
+			m_Inspector.Draw( SelfSerializedObject, layout );
+			SelfSerializedObject.ApplyModifiedProperties();
 		}
 	}
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	internal class AssetViewItem : TreeViewItem
+	internal class AssetTreeViewItem : TreeViewItem
 	{
 		internal bool conforms { get; set; }
 
@@ -27,20 +27,27 @@ namespace AssetTools
 			}
 		}
 
-		internal AssetViewItem( int id, int depth, string displayName, bool assetConforms ) : base( id, depth, displayName )
+		internal AssetTreeViewItem( int id, int depth, string displayName, bool assetConforms ) : base( id, depth, displayName )
 		{
 			conforms = assetConforms;
 		}
 
+		// This is done after setting manually. But if running through the modules during import pipeline. Then perhaps simply reimport and let it handle it.
+		// if manually done (window view) then add to a list of force runOnImport and reset at PostProcessAllAssets  
 		public void ReimportAsset()
 		{
 			if( !isAsset )
 				return;
 			
+			EditorUtility.SetDirty( AssetImporter );
 			AssetImporter.SaveAndReimport();
+		}
+
+		public void Refresh()
+		{
 			icon = AssetDatabase.GetCachedIcon( path ) as Texture2D;
 			
-			if( !conforms )
+			if( conformData != null )
 			{
 				conforms = true;
 				for( int i = 0; i < conformData.Count; ++i )

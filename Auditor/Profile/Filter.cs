@@ -20,10 +20,13 @@ namespace AssetTools
 			FolderName,
 			Directory,
 			Extension,
-			AssetBundle,
+			AssetBundleName,
 			FileSize,
-			Labels
-			// TODO investigate more using post processing, Texture width etc. This will require multiple imports which can result in slow import times
+			ImporterType,
+			// TODO remove labels??
+			Labels // Labels are a bad use-case if doing Preprocessors step - They cannot be obtained until after the import. It is possible to read the meta file. But if it is not Text based or formatting changes it could run into trouble
+
+			// TODO Can get original Texture width/height via reflection, test if can get it during preimport
 		}
 
 		public enum Condition
@@ -64,7 +67,7 @@ namespace AssetTools
 			AssetImporter importerForPath = AssetImporter.GetAtPath( path );
 			if( importerForPath == null )
 			{
-				Debug.LogError( "Could not find importer for " + path );
+				Debug.LogError( "Could not find m_Importer for " + path );
 				return false;
 			}
 			return Conforms( importerForPath, filters );
@@ -112,7 +115,7 @@ namespace AssetTools
 						if( !Target( fi.Length, filters[i] ) )
 							return false;
 						break;
-					case ConditionTarget.AssetBundle:
+					case ConditionTarget.AssetBundleName:
 						if( !Target( importer.assetBundleName, filters[i] ) )
 							return false;
 						break;
@@ -167,6 +170,10 @@ namespace AssetTools
                                 return true;
 						}
 
+						break;
+					case ConditionTarget.ImporterType:
+						if( !Target( importer.GetType().Name, filters[i] ) )
+							return false;
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();

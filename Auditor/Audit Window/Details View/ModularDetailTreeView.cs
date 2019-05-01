@@ -6,18 +6,18 @@ using Assert = UnityEngine.Assertions.Assert;
 
 namespace AssetTools
 {
-	internal class PropertyDetailList : TreeView
+	internal class ModularDetailTreeView : TreeView
 	{
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 
-		private List<AssetViewItem> selectedItems;
+		private List<AssetTreeViewItem> selectedItems;
 		
-		public PropertyDetailList( TreeViewState state ) : base( state )
+		public ModularDetailTreeView( TreeViewState state ) : base( state )
 		{
 			showBorder = true;
 		}
 
-		public void SetSelection( List<AssetViewItem> selection )
+		public void SetSelection( List<AssetTreeViewItem> selection )
 		{
 			selectedItems = selection;
 			Reload();
@@ -41,47 +41,47 @@ namespace AssetTools
 			return root;
 		}
 
-		private static void GenerateTreeElements( AssetViewItem assetItem, TreeViewItem root )
+		private static void GenerateTreeElements( AssetTreeViewItem assetTreeItem, TreeViewItem root )
 		{
-			string activePath = assetItem.displayName + ":";
-			PropertyViewItem propertyRoot = new PropertyViewItem( activePath.GetHashCode(), 0, activePath, true )
+			string activePath = assetTreeItem.displayName + ":";
+			ConformObjectTreeViewItem conformObjectTreeRoot = new ConformObjectTreeViewItem( activePath.GetHashCode(), 0, activePath, true )
 			{
-				icon = assetItem.icon
+				icon = assetTreeItem.icon
 			};
-			if( propertyRoot.children == null )
-				propertyRoot.children = new List<TreeViewItem>();
-			root.AddChild( propertyRoot );
+			if( conformObjectTreeRoot.children == null )
+				conformObjectTreeRoot.children = new List<TreeViewItem>();
+			root.AddChild( conformObjectTreeRoot );
 
-			List<IConformObject> data = assetItem.conformData;
+			List<IConformObject> data = assetTreeItem.conformData;
 			for( int i = 0; i < data.Count; ++i )
 			{
 				// Add all ConformObject's that are properties
 				if( data[i] is PropertyConformObject )
-					AddChildProperty( activePath, propertyRoot, (PropertyConformObject)data[i], assetItem, 1 );
+					AddChildProperty( activePath, conformObjectTreeRoot, (PropertyConformObject)data[i], assetTreeItem, 1 );
 			}
 		}
 
-		private static void AddChildProperty( string parentPath, PropertyViewItem parent, PropertyConformObject propertyConformObject, AssetViewItem assetItem, int depth, int arrayIndex = -1 )
+		private static void AddChildProperty( string parentPath, ConformObjectTreeViewItem parent, PropertyConformObject propertyConformObject, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 )
 		{
 			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
 			string activePath = parentPath + propertyConformObject.Name + extra;
-			PropertyViewItem property = new PropertyViewItem( activePath, depth, propertyConformObject )
+			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, propertyConformObject )
 			{
-				assetViewItem = assetItem
+				assetTreeViewItem = assetTreeItem
 			};
-			parent.AddChild( property );
+			parent.AddChild( conformObjectTree );
 
 			for( int i=0; i<propertyConformObject.SubObjects.Count; ++i )
 			{
 				// TODO will this be slow? , need to see if there is a better way to cache object type
 				if( propertyConformObject.SubObjects[i] is PropertyConformObject )
-					AddChildProperty( activePath, property, (PropertyConformObject)propertyConformObject.SubObjects[i], assetItem, depth+1, propertyConformObject.AssetSerializedProperty.isArray ? i : -1 );
+					AddChildProperty( activePath, conformObjectTree, (PropertyConformObject)propertyConformObject.SubObjects[i], assetTreeItem, depth+1, propertyConformObject.AssetSerializedProperty.isArray ? i : -1 );
 			}
 		}
 
 		protected override void RowGUI( RowGUIArgs args )
 		{
-			PropertyViewItem item = args.item as PropertyViewItem;
+			ConformObjectTreeViewItem item = args.item as ConformObjectTreeViewItem;
 			if( item != null )
 			{
 				float num = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
@@ -127,7 +127,7 @@ namespace AssetTools
 
 		protected override void ContextClickedItem( int id )
 		{
-			PropertyViewItem item = FindItem( id, rootItem ) as PropertyViewItem;
+			ConformObjectTreeViewItem item = FindItem( id, rootItem ) as ConformObjectTreeViewItem;
 			Assert.IsNotNull( item );
 			if( item.conforms )
 				return;
@@ -153,9 +153,10 @@ namespace AssetTools
 			if( context == null )
 				return;
 			
-			// TODO multi-select?
-			PropertyViewItem selectedNodes = context as PropertyViewItem;
-			Assert.IsNotNull( selectedNodes, "Context must be a PropertyViewItem" );
+			// TODO multi-select
+			
+			ConformObjectTreeViewItem selectedNodes = context as ConformObjectTreeViewItem;
+			Assert.IsNotNull( selectedNodes, "Context must be a ConformObjectTreeViewItem" );
 			selectedNodes.CopyProperty();
 		}
 	}
