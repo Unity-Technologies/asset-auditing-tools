@@ -3,6 +3,7 @@ All notable changes will be documented in this file.
 
 ## [0.0.4] - 2019-XX-XX
 - Added multi-select within the window
+- Added ability to Add specific modules
 
 ## [0.0.3] - 2019-04-01
 - Added Preprocessor module
