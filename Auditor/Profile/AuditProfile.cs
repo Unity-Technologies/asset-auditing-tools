@@ -24,10 +24,6 @@ namespace AssetTools
 		public int m_SortIndex = 0;
 		
 		public List<Filter> m_Filters;
-		
-		// TODO is these better as a list of IImportProcessModule?
-		public ImporterPropertiesModule m_ImporterModule;
-		public PreprocessorModule m_PreprocessorModule;
 
 		public List<BaseModule> m_Modules = new List<BaseModule>();
 
@@ -46,10 +42,14 @@ namespace AssetTools
 
 		public List<IConformObject> GetConformData( string asset )
 		{
-			return new List<IConformObject>();
-			// List<IConformObject> lst = m_ImporterModule.GetConformObjects( asset, this );
-			// lst.AddRange( m_PreprocessorModule.GetConformObjects( asset, this ) );
-			// return lst;
+			
+			List<IConformObject> lst = new List<IConformObject>(m_Modules.Count);
+			for( int i = 0; i < m_Modules.Count; ++i )
+			{
+				if( m_Modules[i] != null )
+					lst.AddRange( m_Modules[i].GetConformObjects( asset, this ) );
+			}
+			return lst;
 		}
 
 		public void ProcessAsset( AssetImporter asset, bool checkForConformity = true )
@@ -69,9 +69,6 @@ namespace AssetTools
 
 			if( m_RunOnImport )
 			{
-				// m_ImporterModule.Apply( asset, this );
-				// m_PreprocessorModule.Apply( asset, this );
-
 				for( int i = 0; i < m_Modules.Count; ++i )
 				{
 					if( m_Modules[i] != null )
@@ -85,11 +82,6 @@ namespace AssetTools
 					if( m_Modules[i] != null && m_Modules[i].IsManuallyProcessing( asset ))
 						m_Modules[i].Apply( asset, this );
 				}
-				//
-				// if( m_ImporterModule.IsManuallyProcessing( asset ) )
-				// 	m_ImporterModule.Apply( asset, this );
-				// if( m_PreprocessorModule.IsManuallyProcessing( asset ) )
-				// 	m_PreprocessorModule.Apply( asset, this );
 			}
 		}
 		
@@ -121,7 +113,7 @@ namespace AssetTools
 				moduleInstance.name = type.Name;
 				try
 				{
-					//moduleInstance.hideFlags |= HideFlags.HideInHierarchy;
+					moduleInstance.hideFlags |= HideFlags.HideInHierarchy;
 					AssetDatabase.AddObjectToAsset( moduleInstance, this );
 				}
 				catch( Exception e )
@@ -146,10 +138,8 @@ namespace AssetTools
 			int s = m_SortIndex.CompareTo( other.m_SortIndex );
 			if( s == 0 )
 			{
-				int me = DirectoryPath.Length;
-				int o = other.DirectoryPath.Length;
-				int lengthCompare = DirectoryPath.Length.CompareTo( other.DirectoryPath.Length );
 				// if in same index, sort by shortest path length first
+				int lengthCompare = DirectoryPath.Length.CompareTo( other.DirectoryPath.Length );
 				return lengthCompare;
 			}
 			return s;

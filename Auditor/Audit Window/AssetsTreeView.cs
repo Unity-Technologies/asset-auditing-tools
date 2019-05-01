@@ -292,15 +292,16 @@ namespace AssetTools
 			if( selectedItems.Count == 0 )
 				return;
 			
-			// TODO get list of possible selections from modules
-			// TODO only list modules that do not conform
 			GenericMenu menu = new GenericMenu();
-			menu.AddItem( new GUIContent( m_Profile.m_ImporterModule.AssetMenuFixString ), false, ContextMenuSelectionCallback, 
-				new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_ImporterModule }, selectedItems ) );
-			menu.AddItem( new GUIContent( m_Profile.m_PreprocessorModule.AssetMenuFixString ), false, ContextMenuSelectionCallback, 
-				new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_PreprocessorModule }, selectedItems ) );
-			menu.AddItem( new GUIContent( "All" ), false, ContextMenuSelectionCallback, 
-				new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_ImporterModule, m_Profile.m_PreprocessorModule }, selectedItems ) );
+			List<IImportProcessModule> all = new List<IImportProcessModule>(m_Profile.m_Modules.Count);
+			for( int i = 0; i < m_Profile.m_Modules.Count; ++i )
+			{
+				menu.AddItem( new GUIContent( m_Profile.m_Modules[i].AssetMenuFixString ), false, ContextMenuSelectionCallback, 
+					new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_Modules[i] }, selectedItems ) );
+				all.Add( m_Profile.m_Modules[i] );
+			}
+			menu.AddItem( new GUIContent( "All" ), false, ContextMenuSelectionCallback,
+				new AssetViewItemMenuContext( all, selectedItems ) );
 			menu.ShowAsContext();
 		}
 

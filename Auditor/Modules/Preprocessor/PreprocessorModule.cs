@@ -33,7 +33,10 @@ namespace AssetTools
 
 		public override string AssetMenuFixString
 		{
-			get { return "Import using " + Method.TypeName; }
+			get
+			{
+				return Method == null ? "None Selected" : "Import using " + Method.TypeName;
+			}
 		}
 
 		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
