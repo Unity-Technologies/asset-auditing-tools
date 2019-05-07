@@ -28,11 +28,11 @@ namespace AssetTools
 
 		void OnEnable()
 		{
-			m_ProcessOnImport = serializedObject.FindProperty("m_RunOnImport" );
-			m_FolderOnly = serializedObject.FindProperty("m_FilterToFolder" );
-			m_FiltersListProperty = serializedObject.FindProperty("m_Filters" );
-			m_Modules = serializedObject.FindProperty("m_Modules" );
-			m_SortIndex = serializedObject.FindProperty("m_SortIndex" );
+			m_ProcessOnImport = serializedObject.FindProperty( "m_RunOnImport" );
+			m_FolderOnly = serializedObject.FindProperty( "m_FilterToFolder" );
+			m_FiltersListProperty = serializedObject.FindProperty( "m_Filters" );
+			m_Modules = serializedObject.FindProperty( "m_Modules" );
+			m_SortIndex = serializedObject.FindProperty( "m_SortIndex" );
 			
 			m_ModuleTypes = ProfileCache.GetTypes<BaseModule>();
 		}
@@ -161,7 +161,7 @@ namespace AssetTools
 						GenericMenu menu = new GenericMenu();
 						menu.AddDisabledItem( new GUIContent( "Move Up" ) );
 						menu.AddDisabledItem( new GUIContent( "Move Down" ) );
-						menu.AddItem( new GUIContent( "Delete Module" ), false, RemoveModuleCallback, module );
+						menu.AddItem( new GUIContent( "Delete Module" ), false, RemoveModuleCallback, i );
 						menu.ShowAsContext();
 						current.Use();
 					}
@@ -201,35 +201,42 @@ namespace AssetTools
 
 				menu.ShowAsContext();
 			}
-			
 
 			serializedObject.ApplyModifiedProperties();
 		}
 
 		void RemoveModuleCallback( object context )
 		{
-			Debug.Log( "RC" );
+			int index = (int) context;
+			if( m_Profile.RemoveModule( index ) )
+			{
+				m_Modules.DeleteArrayElementAtIndex( index );
+				m_Modules.MoveArrayElement( index, m_Modules.arraySize - 1 );
+				m_Modules.arraySize = m_Modules.arraySize - 1;
+				
+				m_ModuleFoldoutStates.RemoveAt( index );
+				
+				EditorUtility.SetDirty( m_Profile );
+				Repaint();
+			}
 		}
 		
 		void OnAddModule(object context)
 		{
 			Type t = context as Type;
-			Assert.IsNotNull( t, "Unknown Module Type" );
+			Assert.IsNotNull( t, "Null Module Type" );
 
-			if( !m_Profile.AddModule( t ) )
-				return;
-			
-			m_ModuleFoldoutStates.Add( true );
-
-			// if( !m_AddressableAssetGroupTarget.AddSchema( context as Type ) )
-			// 	return;
-
-			//          
-			// var newFoldoutState = new bool[m_AddressableAssetGroupTarget.SchemaObjects.Count];
-			// for (int i = 0; i < m_FoldoutState.Length; i++)
-			// 	newFoldoutState[i] = m_FoldoutState[i];
-			// m_FoldoutState = newFoldoutState;
-			// m_FoldoutState[m_FoldoutState.Length - 1] = true;
+			BaseModule addedModule = m_Profile.AddModule( t );
+			if( addedModule != null )
+			{
+				// keep the serialised property in sync
+				m_Modules.arraySize++;
+				m_Modules.GetArrayElementAtIndex( m_Modules.arraySize-1 ).objectReferenceValue = addedModule;
+				m_ModuleFoldoutStates.Add( true );
+				
+				EditorUtility.SetDirty( m_Profile );
+				Repaint();
+			}
 		}
 		
 	}

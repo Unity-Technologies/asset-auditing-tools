@@ -85,25 +85,26 @@ namespace AssetTools
 			}
 		}
 		
-		public bool AddModule( Type type )
+		public BaseModule AddModule( Type type )
 		{
 			if (type == null)
 			{
 				Debug.LogWarning("Cannot remove schema with null type.");
-				return false;
+				return null;
 			}
 			if (!typeof(BaseModule).IsAssignableFrom(type))
 			{
 				Debug.LogWarningFormat("Invalid Schema type {0}. Schemas must inherit from AddressableAssetGroupSchema.", type.FullName);
-				return false;
+				return null;
 			}
             
 			foreach( BaseModule moduleObject in m_Modules )
 			{
 				if( moduleObject.GetType() == type )
 				{
+					// TODO check to make sure has to be unique
 					Debug.LogError( "Module already exists" );
-					return false;
+					//return false;
 				}
 			}
 
@@ -121,15 +122,31 @@ namespace AssetTools
 					Console.WriteLine( e );
 					throw;
 				}
+				
 				m_Modules.Add( moduleInstance );
-                
 				EditorUtility.SetDirty( this );
-				AssetDatabase.SaveAssets();
 			}
 
-			return moduleInstance != null;
+			return moduleInstance;
 		}
 
+		public bool RemoveModule( int index )
+		{
+			if( index < 0 || index >= m_Modules.Count )
+				return false;
+			if( m_Modules[index] == null )
+				return true;
+			
+#if UNITY_2018_3_OR_NEWER
+			AssetDatabase.RemoveObjectFromAsset( m_Modules[index] );
+#else
+			DestroyImmediate( m_Modules[index], true );
+#endif
+			m_Modules.RemoveAt( index );
+			EditorUtility.SetDirty( this );
+			return true;
+		}
+		
 		public int CompareTo( AuditProfile other )
 		{
 			if( other == null )
