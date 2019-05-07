@@ -18,15 +18,13 @@ namespace AssetTools
 		private SerializedProperty m_ProcessOnImport;
 		private SerializedProperty m_FolderOnly;
 		private SerializedProperty m_FiltersListProperty;
-		// private SerializedProperty m_ImporterModule;
-		// private SerializedProperty m_PreprocessorModule;
 		private SerializedProperty m_Modules;
 		private SerializedProperty m_SortIndex;
-
-		// private ImporterPropertiesModuleInspector propertiesModuleInspector = new ImporterPropertiesModuleInspector();
-		// private PreprocessorModuleInspector PreprocessorModuleInspector = new PreprocessorModuleInspector();
 		
 		List<Type> m_ModuleTypes;
+		
+		// TODO serialiseFoldoutState??
+		List<bool> m_ModuleFoldoutStates = new List<bool>();
 
 		void OnEnable()
 		{
@@ -141,11 +139,48 @@ namespace AssetTools
 			size = m_Modules.arraySize;
 			for( int i = 0; i < size; ++i )
 			{
+				if( m_ModuleFoldoutStates.Count-1 < i )
+					m_ModuleFoldoutStates.Add( true );
+				
 				SerializedProperty moduleProperty = m_Modules.GetArrayElementAtIndex( i );
 				BaseModule module = moduleProperty.objectReferenceValue as BaseModule;
 				if( module == null )
 					continue;
-				module.DrawGUI( layout );
+
+				if( i > 0 )
+					layout.Space( 10 );
+
+				Rect headerRect = layout.Get( 20 );
+				m_ModuleFoldoutStates[i] = EditorGUI.Foldout( headerRect, m_ModuleFoldoutStates[i], module.name, true );
+				
+				Event current = Event.current;
+				if( headerRect.Contains( current.mousePosition ) )
+				{
+					if( (current.type == EventType.MouseDown && current.button == 1) || current.type == EventType.ContextClick )
+					{
+						GenericMenu menu = new GenericMenu();
+						menu.AddDisabledItem( new GUIContent( "Move Up" ) );
+						menu.AddDisabledItem( new GUIContent( "Move Down" ) );
+						menu.AddItem( new GUIContent( "Delete Module" ), false, RemoveModuleCallback, module );
+						menu.ShowAsContext();
+						current.Use();
+					}
+					else if( current.type == EventType.MouseDown && current.button == 0 )
+					{
+						m_ModuleFoldoutStates[i] = !m_ModuleFoldoutStates[i];
+					}
+				}
+
+				if( m_ModuleFoldoutStates[i] )
+				{
+					layout.BeginArea( 5, 5 );
+
+					module.DrawGUI( layout );
+
+					GUI.depth = GUI.depth - 1;
+					GUI.Box( layout.EndArea(), "" );
+					GUI.depth = GUI.depth + 1;
+				}
 			}
 			
 			if( size > 0 )
@@ -170,6 +205,11 @@ namespace AssetTools
 
 			serializedObject.ApplyModifiedProperties();
 		}
+
+		void RemoveModuleCallback( object context )
+		{
+			Debug.Log( "RC" );
+		}
 		
 		void OnAddModule(object context)
 		{
@@ -178,6 +218,8 @@ namespace AssetTools
 
 			if( !m_Profile.AddModule( t ) )
 				return;
+			
+			m_ModuleFoldoutStates.Add( true );
 
 			// if( !m_AddressableAssetGroupTarget.AddSchema( context as Type ) )
 			// 	return;
