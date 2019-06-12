@@ -38,7 +38,7 @@ namespace AssetTools
 			{
 				if( TemplateType == SerializedPropertyType.Generic )
 					return m_PropertyName;
-				return m_PropertyName + ",  <<<  " + TemplateValue;
+				return m_PropertyName + ",  <<<  " + ExpectedValue; // TODO this will be slow :O
 			}
 			set { m_PropertyName = value; }
 		}
@@ -74,9 +74,15 @@ namespace AssetTools
 			get { return m_TemplateSerializedProperty; }
 		}
 		
+		// TODO cache these values??
 		public string TemplateValue
 		{
 			get { return GetValue( m_TemplateSerializedProperty ); }
+		}
+
+		public string AssetValue
+		{
+			get { return GetValue( m_AssetSerializedProperty ); }
 		}
 
 		public SerializedPropertyType TemplateType
@@ -89,9 +95,54 @@ namespace AssetTools
 			get { return m_AssetSerializedProperty; }
 		}
 
-		public string AssetValue
+		public string ActualValue
 		{
-			get { return GetValue( m_AssetSerializedProperty ); }
+			get
+			{
+				if( AssetSerializedProperty.propertyType != SerializedPropertyType.Generic )
+					return AssetValue;
+				return "";
+			}
+		}
+
+		public string ExpectedValue
+		{
+			get
+			{ 
+				if( AssetSerializedProperty.propertyType != SerializedPropertyType.Generic )
+					return TemplateValue;
+				return "";
+			}
+		}
+
+		public bool ApplyConform( SerializedObject toObject )
+		{
+			toObject.CopyFromSerializedProperty( TemplateSerializedProperty );
+			if( !toObject.ApplyModifiedProperties() )
+			{
+				Debug.LogError( "Copying of SerialisedProperty failed" );
+				return false;
+			}
+
+			return true;
+		}
+		
+		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 )
+		{
+			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
+			string activePath = parentPath + Name + extra;
+			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, this )
+			{
+				assetTreeViewItem = assetTreeItem
+			};
+			parent.AddChild( conformObjectTree );
+
+			for( int i=0; i<SubObjects.Count; ++i )
+			{
+				// TODO will this be slow? , need to see if there is a better way to cache object type
+				if( SubObjects[i] is PropertyConformObject )
+					SubObjects[i].AddTreeViewItems( activePath, conformObjectTree, assetTreeItem, depth+1, AssetSerializedProperty.isArray ? i : -1 );
+			}
 		}
 
 		private static string GetValue( SerializedProperty property )

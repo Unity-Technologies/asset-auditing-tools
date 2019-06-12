@@ -5,14 +5,14 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	internal class AssetTreeViewItem : TreeViewItem
+	public class AssetTreeViewItem : TreeViewItem
 	{
 		internal bool conforms { get; set; }
 
 		public string path = "";
 		public bool isAsset;
 
-		public List<IConformObject> conformData;
+		public List<ModuleConformData> conformData;
 		public SerializedObject assetObject;
 		
 

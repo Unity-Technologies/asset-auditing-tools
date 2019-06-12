@@ -4,41 +4,40 @@ using Assert = UnityEngine.Assertions.Assert;
 
 namespace AssetTools
 {
-	// TODO make this generic for IConformObject
-	internal class ConformObjectTreeViewItem : TreeViewItem
+	public class ConformObjectTreeViewItem : TreeViewItem
 	{
-		internal bool conforms { get; set; }
-		internal PropertyConformObject propertyConformObject { get; set; }
+		private bool m_Conforms = false;
+		internal bool conforms
+		{
+			get
+			{
+				return conformObject != null ? conformObject.Conforms : m_Conforms;
+			}
+			set { m_Conforms = value; }
+		}
+		internal IConformObject conformObject { get; set; }
 		internal AssetTreeViewItem assetTreeViewItem { get; set; }
 		
 		internal ConformObjectTreeViewItem( int id, int depth, string displayName, bool propertyConforms ) : base( id, depth, displayName )
 		{
-			conforms = propertyConforms;
+			m_Conforms = propertyConforms;
 		}
 		
 		internal ConformObjectTreeViewItem( string activePath, int depth, IConformObject conformObject )
 		{
-			Assert.IsTrue( conformObject is PropertyConformObject );
 			base.id = activePath.GetHashCode();
 			base.depth = depth;
-			conforms = conformObject.Conforms;
-			propertyConformObject = (PropertyConformObject)conformObject;
-			
+			this.conformObject = conformObject;
 			base.displayName = conformObject.Name;
 		}
 
-		public void CopyProperty()
+		public void ApplyConform()
 		{
-			assetTreeViewItem.assetObject.CopyFromSerializedProperty( propertyConformObject.TemplateSerializedProperty );
-			if( !assetTreeViewItem.assetObject.ApplyModifiedProperties() )
+			if( conformObject.ApplyConform( assetTreeViewItem.assetObject ) )
 			{
-				Debug.LogError( "copy failed" );
-			}
-			else
-			{
-				propertyConformObject.Conforms = true;
-				conforms = true;
-				displayName = propertyConformObject.Name;
+				conformObject.Conforms = true;
+				m_Conforms = true;
+				displayName = conformObject.Name;
 				assetTreeViewItem.ReimportAsset();
 			}
 		}

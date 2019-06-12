@@ -38,7 +38,7 @@ namespace AssetTools
 		{
 			get
 			{
-				return m_MethodName; // TODO with importedVersion number
+				return m_MethodName + ", <<< " + ExpectedValue;
 			}
 			set { m_MethodName = value; }
 		}
@@ -47,8 +47,42 @@ namespace AssetTools
 		
 		private string m_MethodName;
 		private readonly int m_MethodVersion;
-		private int m_ImportedVersion;
+		private int m_ImportedVersion = Int32.MinValue;
 		
+		public string ActualValue
+		{
+			get
+			{
+				if( m_ImportedVersion == Int32.MinValue )
+					return "None";
+				return m_ImportedVersion.ToString();
+			}
+		}
+
+		public string ExpectedValue
+		{
+			get { return m_MethodVersion.ToString(); }
+		}
+		
+		public bool ApplyConform( SerializedObject toObject )
+		{
+			return false;
+		}
+		
+		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 )
+		{
+			string activePath = parentPath + Name;
+			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, this )
+			{
+				assetTreeViewItem = assetTreeItem
+			};
+			parent.AddChild( conformObjectTree );
+
+			for( int i=0; i<SubObjects.Count; ++i )
+			{
+				SubObjects[i].AddTreeViewItems( activePath, conformObjectTree, assetTreeItem, depth+1 );
+			}
+		}
 
 		public PreprocessorConformObject( string name, int importedVersion, int methodVersion )
 		{

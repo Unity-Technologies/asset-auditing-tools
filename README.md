@@ -17,10 +17,6 @@ General
 - Look into if MonoScript cache should be used for IPreprocessor. Paving the path to no longer being reliant on AssetImporter.userData for importer versioning. With AssetDatabase V2 we can set custom dependencies for Assets. Allowing an Asset to have a dependency on the MonoScript.
 - Track movement and changes to IDF (profiles) to reimport any Assets where necessary.
 - Look into custom Importer for the ScriptableObject for IDF. So it can Apply -> Then allowing reimport any required Assets on Apply.
-- Finish Preprocessor module to actually run on import.
-- Have profiles use IImportProcessModule. Begin as empty
-- Have a way of adding and removing modules in the inspector.
-- Should modules be their own ScriptableObject (added as a subObject)
 - Ordering of modules
 - injection system so modules can share data, and have a way of progressing through an order. This may not be necessary for majority of use-cases. But maybe?
 

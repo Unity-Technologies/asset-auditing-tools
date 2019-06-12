@@ -106,6 +106,8 @@ namespace AssetTools
 			
 			return true;
 		}
+
+		
 		
 		public override bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
 		{
@@ -335,10 +337,7 @@ namespace AssetTools
 			}
 			else
 			{
-				// we need to maintain userData in order to have cache hash valid for selective Postprocessing features
-				string ud = importer.userData;
 				EditorUtility.CopySerialized( ReferenceAssetImporter, importer );
-				importer.userData = ud;
 			}
 
 			m_AssetsToForceApply.Remove( importer.assetPath );
@@ -349,8 +348,8 @@ namespace AssetTools
 		{
 			foreach( string property in m_ConstrainProperties )
 			{
-				SerializedProperty assetRuleSP = templateImporterSO.FindProperty( property );
-				affectedAssetImporterSO.CopyFromSerializedProperty( assetRuleSP );
+				SerializedProperty templateSerialisedProperty = templateImporterSO.FindProperty( property );
+				affectedAssetImporterSO.CopyFromSerializedProperty( templateSerialisedProperty );
 			}
 			
 			if( ! affectedAssetImporterSO.ApplyModifiedProperties() )

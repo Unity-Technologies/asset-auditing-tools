@@ -76,7 +76,7 @@ namespace AssetTools
 
 				AssetTreeViewItem active = assetsTreeFolder;
 				
-				List<IConformObject> conformData = profile.GetConformData( assetPath );
+				List<ModuleConformData> conformData = profile.GetConformData( assetPath );
 				bool result = true;
 				for( int i = 0; i < conformData.Count; ++i )
 				{
@@ -250,7 +250,7 @@ namespace AssetTools
 				}
 			}
 			
-			m_ModularTreeView.SetSelection( m_SelectedItems );
+			m_ModularTreeView.SetSelectedAssetItems( m_SelectedItems );
 		}
 		
 		protected override void DoubleClickedItem( int id )
@@ -343,6 +343,7 @@ namespace AssetTools
 				menuContext.m_Modules[i].SetManuallyProcessing( assetPaths, true );
 			}
 			
+			// reimport all the assets -> triggering the modules to process them (including any that profiles always do)
 			AssetDatabase.StartAssetEditing();
 			for( int i=0; i<assets.Count; ++i )
 			{
@@ -356,10 +357,13 @@ namespace AssetTools
 				for( int i = 0; i < assets.Count; ++i )
 				{
 					// TODO confirm that it now conforms, currently just set everything as Conforms
-					foreach( IConformObject data in assets[i].conformData )
+					foreach( ModuleConformData data in assets[i].conformData )
 					{
-						if( data.GetType() == conformObjectType )
-							SetConformObjectRecursive( data, true, conformObjectType );
+						foreach( IConformObject conformObject in data.m_ConformObjects )
+						{
+							if( conformObject.GetType() == conformObjectType )
+								SetConformObjectRecursive( conformObject, true, conformObjectType );
+						}
 					}
 				}
 			}

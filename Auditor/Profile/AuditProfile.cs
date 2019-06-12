@@ -15,6 +15,32 @@ namespace AssetTools
 		Native,
 		NA
 	}
+
+	public struct ModuleConformData
+	{
+		public IImportProcessModule m_Module;
+		public List<IConformObject> m_ConformObjects;
+
+		public ModuleConformData( IImportProcessModule module, AuditProfile forProfile, string assetPath )
+		{
+			m_Module = module;
+			m_ConformObjects = m_Module.GetConformObjects( assetPath, forProfile );
+		}
+
+		public bool Conforms
+		{
+			get
+			{
+				for( int i = 0; i < m_ConformObjects.Count; ++i )
+				{
+					if( m_ConformObjects[i].Conforms == false )
+						return false;
+				}
+
+				return true;
+			}
+		}
+	}
 	
 	[CreateAssetMenu(fileName = "NewAssetAuditorProfile", menuName = "Asset Tools/New Auditor Profile", order = 0)]
 	public class AuditProfile : ScriptableObject, IComparable<AuditProfile>
@@ -40,16 +66,18 @@ namespace AssetTools
 			set { m_DirectoryPath = null; }
 		}
 
-		public List<IConformObject> GetConformData( string asset )
+		public List<ModuleConformData> GetConformData( string asset )
 		{
-			
-			List<IConformObject> lst = new List<IConformObject>(m_Modules.Count);
+			List<ModuleConformData> data = new List<ModuleConformData>();
 			for( int i = 0; i < m_Modules.Count; ++i )
 			{
 				if( m_Modules[i] != null )
-					lst.AddRange( m_Modules[i].GetConformObjects( asset, this ) );
+				{
+					ModuleConformData d = new ModuleConformData( m_Modules[i], this, asset );
+					data.Add( d );
+				}
 			}
-			return lst;
+			return data;
 		}
 
 		public void ProcessAsset( AssetImporter asset, bool checkForConformity = true )

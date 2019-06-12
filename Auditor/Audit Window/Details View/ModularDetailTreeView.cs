@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -10,16 +11,16 @@ namespace AssetTools
 	{
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 
-		private List<AssetTreeViewItem> selectedItems;
+		private List<AssetTreeViewItem> m_SelectedItems;
 		
 		public ModularDetailTreeView( TreeViewState state ) : base( state )
 		{
 			showBorder = true;
 		}
 
-		public void SetSelection( List<AssetTreeViewItem> selection )
+		public void SetSelectedAssetItems( List<AssetTreeViewItem> selection )
 		{
-			selectedItems = selection;
+			m_SelectedItems = selection;
 			Reload();
 			if( selection.Count > 0 )
 			{
@@ -36,46 +37,48 @@ namespace AssetTools
 			};
 
 			// TODO need to display multiple selection (include folders in that)
-			if( selectedItems != null && selectedItems.Count > 0 && selectedItems[0].isAsset )
-				GenerateTreeElements( selectedItems[0], root );
+			if( m_SelectedItems != null && m_SelectedItems.Count > 0 && m_SelectedItems[0].isAsset )
+				GenerateTreeElements( m_SelectedItems[0], root );
 			return root;
 		}
 
 		private static void GenerateTreeElements( AssetTreeViewItem assetTreeItem, TreeViewItem root )
 		{
 			string activePath = assetTreeItem.displayName + ":";
-			ConformObjectTreeViewItem conformObjectTreeRoot = new ConformObjectTreeViewItem( activePath.GetHashCode(), 0, activePath, true )
+			
+			// create root object for the Asset
+			ConformObjectTreeViewItem conformObjectAssetRoot = new ConformObjectTreeViewItem( activePath.GetHashCode(), 0, activePath, true )
 			{
 				icon = assetTreeItem.icon
 			};
-			if( conformObjectTreeRoot.children == null )
-				conformObjectTreeRoot.children = new List<TreeViewItem>();
-			root.AddChild( conformObjectTreeRoot );
+			if( conformObjectAssetRoot.children == null )
+				conformObjectAssetRoot.children = new List<TreeViewItem>();
+			root.AddChild( conformObjectAssetRoot );
 
-			List<IConformObject> data = assetTreeItem.conformData;
+			List<ModuleConformData> data = assetTreeItem.conformData;
+			
 			for( int i = 0; i < data.Count; ++i )
 			{
-				// Add all ConformObject's that are properties
-				if( data[i] is PropertyConformObject )
-					AddChildProperty( activePath, conformObjectTreeRoot, (PropertyConformObject)data[i], assetTreeItem, 1 );
-			}
-		}
+				if( data[i].m_ConformObjects.Count == 0 )
+					continue;
+				
+				// TODO some unique way incase we have multiple modules of the same type
+				string moduleName = data[i].m_Module.GetType().Name;
+				ConformObjectTreeViewItem conformObjectModuleRoot = new ConformObjectTreeViewItem( moduleName.GetHashCode(), 1, moduleName, true );
+				if( conformObjectModuleRoot.children == null )
+					conformObjectModuleRoot.children = new List<TreeViewItem>();
+				conformObjectAssetRoot.AddChild( conformObjectModuleRoot );
 
-		private static void AddChildProperty( string parentPath, ConformObjectTreeViewItem parent, PropertyConformObject propertyConformObject, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 )
-		{
-			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
-			string activePath = parentPath + propertyConformObject.Name + extra;
-			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, propertyConformObject )
-			{
-				assetTreeViewItem = assetTreeItem
-			};
-			parent.AddChild( conformObjectTree );
+				if( data[i].Conforms == false )
+				{
+					conformObjectModuleRoot.conforms = false;
+					conformObjectAssetRoot.conforms = false;
+				}
 
-			for( int i=0; i<propertyConformObject.SubObjects.Count; ++i )
-			{
-				// TODO will this be slow? , need to see if there is a better way to cache object type
-				if( propertyConformObject.SubObjects[i] is PropertyConformObject )
-					AddChildProperty( activePath, conformObjectTree, (PropertyConformObject)propertyConformObject.SubObjects[i], assetTreeItem, depth+1, propertyConformObject.AssetSerializedProperty.isArray ? i : -1 );
+				foreach( var conformObject in data[i].m_ConformObjects )
+				{
+					conformObject.AddTreeViewItems( activePath, conformObjectModuleRoot, assetTreeItem, 2 );
+				}
 			}
 		}
 
@@ -96,16 +99,15 @@ namespace AssetTools
 
 				Color old = GUI.color;
 				if( item.conforms == false )
-				{
 					GUI.color = k_ConformFailColor;
-				}
 				
-				if( item.propertyConformObject != null && item.propertyConformObject.AssetSerializedProperty.propertyType != SerializedPropertyType.Generic && r.width > 400 )
+				// This displays what the current value is
+				if( item.conformObject != null && r.width > 400 )
 				{
 					Rect or = new Rect(r);
 					or.x += r.width - 100;
 					or.width = 100;
-					EditorGUI.LabelField( or, item.propertyConformObject.AssetValue );
+					EditorGUI.LabelField( or, item.conformObject.ActualValue );
 				}
 
 				r = args.rowRect;
@@ -132,20 +134,26 @@ namespace AssetTools
 			if( item.conforms )
 				return;
 			
-			GenericMenu menu = new GenericMenu();
-			if( item.propertyConformObject.TemplateType == SerializedPropertyType.Generic )
+			// TODO ask the ConformObject to do this
+			PropertyConformObject propertyConformObject = item.conformObject as PropertyConformObject;
+			if( propertyConformObject != null )
 			{
-				menu.AddItem( new GUIContent( "Set children to Template Values" ), false, FixCallback, item );
+				GenericMenu menu = new GenericMenu();
+				if( propertyConformObject.TemplateType == SerializedPropertyType.Generic )
+				{
+					menu.AddItem( new GUIContent( "Set children to Template Values" ), false, FixCallback, item );
+				}
+				else if( propertyConformObject.TemplateType == SerializedPropertyType.ArraySize )
+				{
+					menu.AddDisabledItem( new GUIContent( "Cannot set array size" ) );
+				}
+				else
+				{
+					menu.AddItem( new GUIContent( "Set to " + propertyConformObject.TemplateValue ), false, FixCallback, item );
+				}
+
+				menu.ShowAsContext();
 			}
-			else if( item.propertyConformObject.TemplateType == SerializedPropertyType.ArraySize )
-			{
-				menu.AddDisabledItem( new GUIContent( "Cannot set array size" ) );
-			}
-			else
-			{
-				menu.AddItem( new GUIContent( "Set to " + item.propertyConformObject.TemplateValue ), false, FixCallback, item );
-			}
-			menu.ShowAsContext();
 		}
 
 		private static void FixCallback( object context )
@@ -154,10 +162,9 @@ namespace AssetTools
 				return;
 			
 			// TODO multi-select
-			
 			ConformObjectTreeViewItem selectedNodes = context as ConformObjectTreeViewItem;
 			Assert.IsNotNull( selectedNodes, "Context must be a ConformObjectTreeViewItem" );
-			selectedNodes.CopyProperty();
+			selectedNodes.ApplyConform();
 		}
 	}
 

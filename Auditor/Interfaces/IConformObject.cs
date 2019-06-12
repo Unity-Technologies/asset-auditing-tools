@@ -12,5 +12,13 @@ namespace AssetTools
 		bool Conforms { get; set; }
 
 		List<IConformObject> SubObjects { get; set; }
+		
+		string ActualValue { get; }
+		
+		string ExpectedValue { get; }
+
+		bool ApplyConform( SerializedObject toObject );
+
+		void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 );
 	}
 }
