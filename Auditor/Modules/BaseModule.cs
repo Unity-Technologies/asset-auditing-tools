@@ -13,7 +13,7 @@ namespace AssetTools
 	public abstract class BaseModule : ScriptableObject, IImportProcessModule
 	{
 		protected List<string> m_AssetsToForceApply = new List<string>();
-		protected string m_SearchFilter;
+		protected string m_SearchFilter = "";
 		
 		private SerializedObject m_SelfSerializedObject = null;
 

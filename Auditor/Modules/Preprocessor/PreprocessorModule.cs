@@ -15,8 +15,8 @@ namespace AssetTools
 		
 		private const string kModuleName = "PreprocessorModule";
 		
-		[SerializeField] private string m_MethodString;
-		[SerializeField] private string m_Data;
+		[SerializeField] private string m_MethodString = "";
+		[SerializeField] private string m_Data = "";
 
 		private PreprocessorModuleInspector m_Inspector = null;
 		internal ProcessorMethodInfo m_ProcessorMethodInfo;
