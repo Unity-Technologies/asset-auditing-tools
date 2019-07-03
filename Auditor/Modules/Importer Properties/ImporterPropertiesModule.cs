@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using AssetTools.GUIUtility;
 using UnityEditor;
+#if UNITY_2018_1_OR_NEWER
 using UnityEditor.Presets;
+#endif
 using UnityEngine;
 
 namespace AssetTools
