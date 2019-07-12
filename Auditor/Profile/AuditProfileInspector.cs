@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Reflection;
@@ -42,7 +42,7 @@ namespace AssetTools
 			if( m_Profile == null )
 				m_Profile = (AuditProfile) target;
 
-			Rect viewRect = EditorGUILayout.GetControlRect();
+			Rect viewRect = new Rect( 18, 0, EditorGUIUtility.currentViewWidth-23, EditorGUIUtility.singleLineHeight );
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
 			
 			layout.Space( 10 );
@@ -201,7 +201,12 @@ namespace AssetTools
 
 				menu.ShowAsContext();
 			}
-
+			
+#if UNITY_2019_1_OR_NEWER
+			// temporary solution to reserve the rect space for drawing in 2019.1+
+			// remove after Unity Editor bug is resolved, id: 1169234
+			GUILayoutUtility.GetRect( viewRect.width, layoutRect.y + layoutRect.height );
+#endif
 			serializedObject.ApplyModifiedProperties();
 		}
 
