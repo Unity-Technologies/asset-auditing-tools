@@ -69,18 +69,18 @@ namespace AssetTools
 			return false;
 		}
 		
-		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 )
+		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetsTreeViewItem assetsTreeItem, int depth, int arrayIndex = -1 )
 		{
 			string activePath = parentPath + Name;
 			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, this )
 			{
-				assetTreeViewItem = assetTreeItem
+				AssetsTreeViewItem = assetsTreeItem
 			};
 			parent.AddChild( conformObjectTree );
 
 			for( int i=0; i<SubObjects.Count; ++i )
 			{
-				SubObjects[i].AddTreeViewItems( activePath, conformObjectTree, assetTreeItem, depth+1 );
+				SubObjects[i].AddTreeViewItems( activePath, conformObjectTree, assetsTreeItem, depth+1 );
 			}
 		}
 

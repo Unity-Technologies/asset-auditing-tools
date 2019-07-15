@@ -11,14 +11,14 @@ namespace AssetTools
 	{
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 
-		private List<AssetTreeViewItem> m_SelectedItems;
+		private List<AssetsTreeViewItem> m_SelectedItems;
 		
 		public ModularDetailTreeView( TreeViewState state ) : base( state )
 		{
 			showBorder = true;
 		}
 
-		public void SetSelectedAssetItems( List<AssetTreeViewItem> selection )
+		public void SetSelectedAssetItems( List<AssetsTreeViewItem> selection )
 		{
 			m_SelectedItems = selection;
 			Reload();
@@ -42,20 +42,20 @@ namespace AssetTools
 			return root;
 		}
 
-		private static void GenerateTreeElements( AssetTreeViewItem assetTreeItem, TreeViewItem root )
+		private static void GenerateTreeElements( AssetsTreeViewItem assetsTreeItem, TreeViewItem root )
 		{
-			string activePath = assetTreeItem.displayName + ":";
+			string activePath = assetsTreeItem.displayName + ":";
 			
 			// create root object for the Asset
 			ConformObjectTreeViewItem conformObjectAssetRoot = new ConformObjectTreeViewItem( activePath.GetHashCode(), 0, activePath, true )
 			{
-				icon = assetTreeItem.icon
+				icon = assetsTreeItem.icon
 			};
 			if( conformObjectAssetRoot.children == null )
 				conformObjectAssetRoot.children = new List<TreeViewItem>();
 			root.AddChild( conformObjectAssetRoot );
 
-			List<ModuleConformData> data = assetTreeItem.conformData;
+			List<ModuleConformData> data = assetsTreeItem.conformData;
 			
 			for( int i = 0; i < data.Count; ++i )
 			{
@@ -77,7 +77,7 @@ namespace AssetTools
 
 				foreach( var conformObject in data[i].m_ConformObjects )
 				{
-					conformObject.AddTreeViewItems( activePath, conformObjectModuleRoot, assetTreeItem, 2 );
+					conformObject.AddTreeViewItems( activePath, conformObjectModuleRoot, assetsTreeItem, 2 );
 				}
 			}
 		}

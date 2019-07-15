@@ -127,13 +127,13 @@ namespace AssetTools
 			return true;
 		}
 		
-		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 )
+		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetsTreeViewItem assetsTreeItem, int depth, int arrayIndex = -1 )
 		{
 			string extra = arrayIndex >= 0 ? arrayIndex.ToString() : "";
 			string activePath = parentPath + Name + extra;
 			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, this )
 			{
-				assetTreeViewItem = assetTreeItem
+				AssetsTreeViewItem = assetsTreeItem
 			};
 			parent.AddChild( conformObjectTree );
 
@@ -141,7 +141,7 @@ namespace AssetTools
 			{
 				// TODO will this be slow? , need to see if there is a better way to cache object type
 				if( SubObjects[i] is PropertyConformObject )
-					SubObjects[i].AddTreeViewItems( activePath, conformObjectTree, assetTreeItem, depth+1, AssetSerializedProperty.isArray ? i : -1 );
+					SubObjects[i].AddTreeViewItems( activePath, conformObjectTree, assetsTreeItem, depth+1, AssetSerializedProperty.isArray ? i : -1 );
 			}
 		}
 

@@ -19,6 +19,6 @@ namespace AssetTools
 
 		bool ApplyConform( SerializedObject toObject );
 
-		void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetTreeViewItem assetTreeItem, int depth, int arrayIndex = -1 );
+		void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetsTreeViewItem assetsTreeItem, int depth, int arrayIndex = -1 );
 	}
 }

@@ -11,9 +11,9 @@ namespace AssetTools
 		private class AssetViewItemMenuContext
 		{
 			public List<IImportProcessModule> m_Modules;
-			public List<AssetTreeViewItem> m_Items;
+			public List<AssetsTreeViewItem> m_Items;
 
-			public AssetViewItemMenuContext( List<IImportProcessModule> modules, List<AssetTreeViewItem> items )
+			public AssetViewItemMenuContext( List<IImportProcessModule> modules, List<AssetsTreeViewItem> items )
 			{
 				m_Modules = modules;
 				m_Items = items;
@@ -23,7 +23,7 @@ namespace AssetTools
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 		
 		public AuditProfile m_Profile;
-		private readonly List<AssetTreeViewItem> m_SelectedItems = new List<AssetTreeViewItem>();
+		private readonly List<AssetsTreeViewItem> m_SelectedItems = new List<AssetsTreeViewItem>();
 		internal ModularDetailTreeView m_ModularTreeView;
 
 		public AssetsTreeView( TreeViewState state ) : base( state )
@@ -57,14 +57,14 @@ namespace AssetTools
 			}
 
 			string activePath = "Assets";
-			AssetTreeViewItem assetsTreeFolder = new AssetTreeViewItem( activePath.GetHashCode(), 0, activePath, true );
-			if( assetsTreeFolder.children == null )
-				assetsTreeFolder.children = new List<TreeViewItem>();
-			root.AddChild( assetsTreeFolder );
+			AssetsTreeViewItem assetsesTreeFolder = new AssetsTreeViewItem( activePath.GetHashCode(), 0, activePath, true );
+			if( assetsesTreeFolder.children == null )
+				assetsesTreeFolder.children = new List<TreeViewItem>();
+			root.AddChild( assetsesTreeFolder );
 
-			Dictionary<int, AssetTreeViewItem> items = new Dictionary<int, AssetTreeViewItem>
+			Dictionary<int, AssetsTreeViewItem> items = new Dictionary<int, AssetsTreeViewItem>
 			{
-				{activePath.GetHashCode(), assetsTreeFolder}
+				{activePath.GetHashCode(), assetsesTreeFolder}
 			};
 
 			foreach( var assetPath in associatedAssets )
@@ -74,7 +74,7 @@ namespace AssetTools
 				var strings = path.Split( new[] {'/'}, StringSplitOptions.None );
 				activePath = "Assets";
 
-				AssetTreeViewItem active = assetsTreeFolder;
+				AssetsTreeViewItem active = assetsesTreeFolder;
 				
 				List<ModuleConformData> conformData = profile.GetConformData( assetPath );
 				bool result = true;
@@ -87,8 +87,8 @@ namespace AssetTools
 					}
 				}
 				
-				if( !result && assetsTreeFolder.conforms )
-					assetsTreeFolder.conforms = false;
+				if( !result && assetsesTreeFolder.conforms )
+					assetsesTreeFolder.conforms = false;
 				
 				AssetImporter assetImporter = AssetImporter.GetAtPath( assetPath );
 				SerializedObject assetImporterSO = new SerializedObject( assetImporter );
@@ -101,7 +101,7 @@ namespace AssetTools
 
 					if( i == strings.Length - 1 )
 					{
-						AssetTreeViewItem item = new AssetTreeViewItem( id, i + 1, strings[i], result )
+						AssetsTreeViewItem item = new AssetsTreeViewItem( id, i + 1, strings[i], result )
 						{
 							icon = AssetDatabase.GetCachedIcon( assetPath ) as Texture2D,
 							path = activePath,
@@ -117,10 +117,10 @@ namespace AssetTools
 					}
 					else
 					{
-						AssetTreeViewItem item;
+						AssetsTreeViewItem item;
 						if( !items.TryGetValue( id, out item ) )
 						{
-							item = new AssetTreeViewItem( id, i + 1, strings[i], result )
+							item = new AssetsTreeViewItem( id, i + 1, strings[i], result )
 							{
 								path = activePath,
 								icon = AssetDatabase.GetCachedIcon( activePath ) as Texture2D
@@ -197,7 +197,7 @@ namespace AssetTools
 
 		protected override void RowGUI( RowGUIArgs args )
 		{
-			AssetTreeViewItem item = args.item as AssetTreeViewItem;
+			AssetsTreeViewItem item = args.item as AssetsTreeViewItem;
 			if( item != null )
 			{
 				float num = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
@@ -243,7 +243,7 @@ namespace AssetTools
 
 			for( int i = 0; i < selectedIds.Count; ++i )
 			{
-				AssetTreeViewItem item = FindItem( selectedIds[i], rootItem ) as AssetTreeViewItem;
+				AssetsTreeViewItem item = FindItem( selectedIds[i], rootItem ) as AssetsTreeViewItem;
 				if( item != null )
 				{
 					m_SelectedItems.Add( item );
@@ -256,7 +256,7 @@ namespace AssetTools
 		protected override void DoubleClickedItem( int id )
 		{
 			base.DoubleClickedItem( id );
-			AssetTreeViewItem pathItem = FindItem( id, rootItem ) as AssetTreeViewItem;
+			AssetsTreeViewItem pathItem = FindItem( id, rootItem ) as AssetsTreeViewItem;
 			if( pathItem == null )
 				return;
 			
@@ -266,19 +266,19 @@ namespace AssetTools
 
 		protected override void ContextClickedItem( int id )
 		{
-			AssetTreeViewItem contextItem = FindItem( id, rootItem ) as AssetTreeViewItem;
+			AssetsTreeViewItem contextItem = FindItem( id, rootItem ) as AssetsTreeViewItem;
 			if( contextItem == null )
 			{
 				Debug.LogError( "ContextMenu on unknown ID" );
 				return;
 			}
 
-			List<AssetTreeViewItem> selectedItems = new List<AssetTreeViewItem>{ contextItem };
+			List<AssetsTreeViewItem> selectedItems = new List<AssetsTreeViewItem>{ contextItem };
 			for( int i = 0; i < m_SelectedItems.Count; ++i )
 			{
 				if( id == m_SelectedItems[i].id )
 				{
-					selectedItems = new List<AssetTreeViewItem>( m_SelectedItems );
+					selectedItems = new List<AssetsTreeViewItem>( m_SelectedItems );
 					break;
 				}
 			}
@@ -314,8 +314,8 @@ namespace AssetTools
 				return;
 			}
 			
-			List<AssetTreeViewItem> assets = new List<AssetTreeViewItem>();
-			List<AssetTreeViewItem> folders = new List<AssetTreeViewItem>();
+			List<AssetsTreeViewItem> assets = new List<AssetsTreeViewItem>();
+			List<AssetsTreeViewItem> folders = new List<AssetsTreeViewItem>();
 			for( int i = 0; i < menuContext.m_Items.Count; ++i )
 			{
 				if( menuContext.m_Items[i].isAsset == false )
@@ -368,12 +368,12 @@ namespace AssetTools
 				}
 			}
 			
-			List<AssetTreeViewItem> checkFoldersForConform = new List<AssetTreeViewItem>();
+			List<AssetsTreeViewItem> checkFoldersForConform = new List<AssetsTreeViewItem>();
 
 			for( int i = 0; i < assets.Count; ++i )
 			{
 				assets[i].Refresh();
-				AssetTreeViewItem parent = assets[i].parent as AssetTreeViewItem;
+				AssetsTreeViewItem parent = assets[i].parent as AssetsTreeViewItem;
 				if( parent != null & checkFoldersForConform.Contains( parent ) == false )
 					checkFoldersForConform.Add( parent );
 			}
@@ -384,7 +384,7 @@ namespace AssetTools
 				{
 					folders[i].conforms = true;
 					folders[i].Refresh();
-					AssetTreeViewItem parent = folders[i].parent as AssetTreeViewItem;
+					AssetsTreeViewItem parent = folders[i].parent as AssetsTreeViewItem;
 					if( parent != null && parent.conforms == false && checkFoldersForConform.Contains( parent ) == false )
 						checkFoldersForConform.Add( parent );
 				}
@@ -395,7 +395,7 @@ namespace AssetTools
 				bool conforms = true;
 				for( int i = 0; i < checkFoldersForConform[0].children.Count; ++i )
 				{
-					AssetTreeViewItem item = checkFoldersForConform[0].children[i] as AssetTreeViewItem;
+					AssetsTreeViewItem item = checkFoldersForConform[0].children[i] as AssetsTreeViewItem;
 					if( item != null && item.conforms == false )
 						conforms = false;
 				}
@@ -403,7 +403,7 @@ namespace AssetTools
 				if( conforms )
 				{
 					checkFoldersForConform[0].conforms = true;
-					AssetTreeViewItem parent = checkFoldersForConform[0].parent as AssetTreeViewItem;
+					AssetsTreeViewItem parent = checkFoldersForConform[0].parent as AssetsTreeViewItem;
 					if( parent != null & checkFoldersForConform.Contains( parent ) == false )
 						checkFoldersForConform.Add( parent );
 				}
@@ -424,11 +424,11 @@ namespace AssetTools
 			}
 		}
 		
-		static void GetAssetItems( AssetTreeViewItem item , List<AssetTreeViewItem> assets, List<AssetTreeViewItem> folders )
+		static void GetAssetItems( AssetsTreeViewItem item , List<AssetsTreeViewItem> assets, List<AssetsTreeViewItem> folders )
 		{
 			for( int i = 0; i < item.children.Count; ++i )
 			{
-				AssetTreeViewItem avi = item.children[i] as AssetTreeViewItem;
+				AssetsTreeViewItem avi = item.children[i] as AssetsTreeViewItem;
 				if( avi.isAsset == false && folders.Contains( avi ) == false )
 				{
 					folders.Add( avi );
