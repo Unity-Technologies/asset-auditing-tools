@@ -1,7 +1,11 @@
 # Changelog
 All notable changes will be documented in this file.
 
-## [0.0.4] - 2019-XX-XX
+## [0.0.5] - 2019-XX-XX
+- Refactored the project and renaming the tools to better describe the functionality
+    - note: Profiles made in the old naming will need to be reimported
+
+## [0.0.4] - 2019-05-01
 - Added multi-select within the window
 - Added ability to Add specific modules
 
