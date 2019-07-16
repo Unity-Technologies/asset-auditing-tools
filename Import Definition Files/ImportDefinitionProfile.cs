@@ -15,8 +15,10 @@ namespace AssetTools
 		public bool m_RunOnImport = false;
 		public bool m_FilterToFolder = true;
 		public int m_SortIndex = 0;
+		
+		[SerializeField] private List<Filter> m_Filters;
+		
 		private string m_DirectoryPath = null;
-		public List<Filter> m_Filters;
 		
 		[FormerlySerializedAs( "m_Modules" )]
 		public List<BaseImportTask> m_ImportTasks = new List<BaseImportTask>();
@@ -30,6 +32,14 @@ namespace AssetTools
 				return m_DirectoryPath;
 			}
 			set { m_DirectoryPath = null; }
+		}
+
+		public List<Filter> GetFilters( bool userFiltersOnly = false )
+		{
+			List<Filter> filters = new List<Filter>(m_Filters);
+			if( m_FilterToFolder )
+				filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
+			return filters;
 		}
 
 		public List<ConformData> GetConformData( string asset )

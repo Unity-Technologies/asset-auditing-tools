@@ -41,8 +41,11 @@ namespace AssetTools
 		{
 			if( m_Profile == null )
 				m_Profile = (ImportDefinitionProfile) target;
-
+#if UNITY_2019_1_OR_NEWER
 			Rect viewRect = new Rect( 18, 0, EditorGUIUtility.currentViewWidth-23, EditorGUIUtility.singleLineHeight );
+#else
+			Rect viewRect = EditorGUILayout.GetControlRect( false );
+#endif
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
 			
 			layout.Space( 10 );
@@ -52,11 +55,12 @@ namespace AssetTools
 			layout.Space( 10 );
 			
 			EditorGUI.LabelField( layout.Get(), "Search Filter's" );
-			
-			if( m_Profile.m_Filters == null )
-				m_Profile.m_Filters = new List<Filter>();
 
-			int filterCount = m_Profile.m_Filters.Count;
+			List<Filter> filters = m_Profile.GetFilters( true );
+			if( filters == null )
+				filters = new List<Filter>();
+
+			int filterCount = filters.Count;
 			if( m_FolderOnly.boolValue )
 				filterCount++;
 

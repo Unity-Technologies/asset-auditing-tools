@@ -188,7 +188,7 @@ namespace AssetTools
 				if( ignorePaths.Contains( assetPath ) || associatedAssets.Contains( assetPath ) )
 					continue;
 
-				if( Filter.Conforms( assetPath, profile.m_Filters ) )
+				if( Filter.Conforms( assetPath, profile.GetFilters() ) )
 					associatedAssets.Add( assetPath );
 			}
 
