@@ -3,57 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.Serialization;
 
 namespace AssetTools
 {
-	public enum AssetType
-	{
-		Texture,
-		Model,
-		Audio,
-		Folder,
-		Native,
-		NA
-	}
 
-	public struct ModuleConformData
-	{
-		public IImportProcessModule m_Module;
-		public List<IConformObject> m_ConformObjects;
 
-		public ModuleConformData( IImportProcessModule module, AuditProfile forProfile, string assetPath )
-		{
-			m_Module = module;
-			m_ConformObjects = m_Module.GetConformObjects( assetPath, forProfile );
-		}
-
-		public bool Conforms
-		{
-			get
-			{
-				for( int i = 0; i < m_ConformObjects.Count; ++i )
-				{
-					if( m_ConformObjects[i].Conforms == false )
-						return false;
-				}
-
-				return true;
-			}
-		}
-	}
-	
-	[CreateAssetMenu(fileName = "NewAssetAuditorProfile", menuName = "Asset Tools/New Auditor Profile", order = 0)]
-	public class AuditProfile : ScriptableObject, IComparable<AuditProfile>
+	[CreateAssetMenu(fileName = "New Import Definition", menuName = "Asset Tools/New Import Definition", order = 0)]
+	public class ImportDefinitionProfile : ScriptableObject, IComparable<ImportDefinitionProfile>
 	{
 		public bool m_RunOnImport = false;
 		public bool m_FilterToFolder = true;
 		public int m_SortIndex = 0;
-		
-		public List<Filter> m_Filters;
-
-		public List<BaseModule> m_Modules = new List<BaseModule>();
-
 		private string m_DirectoryPath = null;
+		public List<Filter> m_Filters;
+		
+		[FormerlySerializedAs( "m_Modules" )]
+		public List<BaseImportTask> m_ImportTasks = new List<BaseImportTask>();
 
 		internal string DirectoryPath
 		{
@@ -66,14 +32,14 @@ namespace AssetTools
 			set { m_DirectoryPath = null; }
 		}
 
-		public List<ModuleConformData> GetConformData( string asset )
+		public List<ConformData> GetConformData( string asset )
 		{
-			List<ModuleConformData> data = new List<ModuleConformData>();
-			for( int i = 0; i < m_Modules.Count; ++i )
+			List<ConformData> data = new List<ConformData>();
+			for( int i = 0; i < m_ImportTasks.Count; ++i )
 			{
-				if( m_Modules[i] != null )
+				if( m_ImportTasks[i] != null )
 				{
-					ModuleConformData d = new ModuleConformData( m_Modules[i], this, asset );
+					ConformData d = new ConformData( m_ImportTasks[i], this, asset );
 					data.Add( d );
 				}
 			}
@@ -97,36 +63,36 @@ namespace AssetTools
 
 			if( m_RunOnImport )
 			{
-				for( int i = 0; i < m_Modules.Count; ++i )
+				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
-					if( m_Modules[i] != null )
-						m_Modules[i].Apply( asset, this );
+					if( m_ImportTasks[i] != null )
+						m_ImportTasks[i].Apply( asset, this );
 				}
 			}
 			else
 			{
-				for( int i = 0; i < m_Modules.Count; ++i )
+				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
-					if( m_Modules[i] != null && m_Modules[i].IsManuallyProcessing( asset ))
-						m_Modules[i].Apply( asset, this );
+					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( asset ) )
+						m_ImportTasks[i].Apply( asset, this );
 				}
 			}
 		}
 		
-		public BaseModule AddModule( Type type )
+		public BaseImportTask AddModule( Type type )
 		{
 			if (type == null)
 			{
 				Debug.LogWarning("Cannot remove schema with null type.");
 				return null;
 			}
-			if (!typeof(BaseModule).IsAssignableFrom(type))
+			if (!typeof(BaseImportTask).IsAssignableFrom(type))
 			{
 				Debug.LogWarningFormat("Invalid Schema type {0}. Schemas must inherit from AddressableAssetGroupSchema.", type.FullName);
 				return null;
 			}
             
-			foreach( BaseModule moduleObject in m_Modules )
+			foreach( BaseImportTask moduleObject in m_ImportTasks )
 			{
 				if( moduleObject.GetType() == type )
 				{
@@ -136,14 +102,14 @@ namespace AssetTools
 				}
 			}
 
-			BaseModule moduleInstance = (BaseModule)CreateInstance( type );
-			if( moduleInstance != null )
+			BaseImportTask importTaskInstance = (BaseImportTask)CreateInstance( type );
+			if( importTaskInstance != null )
 			{
-				moduleInstance.name = type.Name;
+				importTaskInstance.name = type.Name;
 				try
 				{
-					moduleInstance.hideFlags |= HideFlags.HideInHierarchy;
-					AssetDatabase.AddObjectToAsset( moduleInstance, this );
+					importTaskInstance.hideFlags |= HideFlags.HideInHierarchy;
+					AssetDatabase.AddObjectToAsset( importTaskInstance, this );
 				}
 				catch( Exception e )
 				{
@@ -151,31 +117,31 @@ namespace AssetTools
 					throw;
 				}
 				
-				m_Modules.Add( moduleInstance );
+				m_ImportTasks.Add( importTaskInstance );
 				EditorUtility.SetDirty( this );
 			}
 
-			return moduleInstance;
+			return importTaskInstance;
 		}
 
 		public bool RemoveModule( int index )
 		{
-			if( index < 0 || index >= m_Modules.Count )
+			if( index < 0 || index >= m_ImportTasks.Count )
 				return false;
-			if( m_Modules[index] == null )
+			if( m_ImportTasks[index] == null )
 				return true;
 			
 #if UNITY_2018_3_OR_NEWER
-			AssetDatabase.RemoveObjectFromAsset( m_Modules[index] );
+			AssetDatabase.RemoveObjectFromAsset( m_ImportTasks[index] );
 #else
-			DestroyImmediate( m_Modules[index], true );
+			DestroyImmediate( m_ImportTasks[index], true );
 #endif
-			m_Modules.RemoveAt( index );
+			m_ImportTasks.RemoveAt( index );
 			EditorUtility.SetDirty( this );
 			return true;
 		}
 		
-		public int CompareTo( AuditProfile other )
+		public int CompareTo( ImportDefinitionProfile other )
 		{
 			if( other == null )
 				return 1;

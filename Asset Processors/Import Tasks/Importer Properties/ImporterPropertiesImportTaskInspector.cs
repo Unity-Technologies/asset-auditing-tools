@@ -7,24 +7,21 @@ using UnityEngine.Assertions;
 
 namespace AssetTools
 {
-	public class ImporterPropertiesModuleInspector
+	public class ImporterPropertiesImportTaskInspector
 	{
-		// TODO constructor to setup << why did I add this?
-		
-		private ImporterPropertiesModule m_Module;
+		private ImporterPropertiesImportTask m_ImportTask;
 		
 		private SerializedProperty m_ImporterReferenceSerializedProperty;
 		private SerializedProperty m_ConstrainPropertiesSerializedProperty;
 		
-		
 		public void Draw( SerializedObject moduleObject, ControlRect layout )
 		{
-			if( m_Module == null )
+			if( m_ImportTask == null )
 			{
-				m_Module = moduleObject.targetObject as ImporterPropertiesModule;
-				if( m_Module == null )
+				m_ImportTask = moduleObject.targetObject as ImporterPropertiesImportTask;
+				if( m_ImportTask == null )
 				{
-					Debug.LogError( "SerializedObject must be of type ImporterPropertiesModule" );
+					Debug.LogError( "SerializedObject must be of type ImporterPropertiesImportTask" );
 					return;
 				}
 			}
@@ -35,27 +32,17 @@ namespace AssetTools
 				m_ConstrainPropertiesSerializedProperty = moduleObject.FindProperty( "m_ConstrainProperties" );
 				if( m_ImporterReferenceSerializedProperty == null || m_ConstrainPropertiesSerializedProperty == null )
 				{
-					Debug.LogError( "Invalid properties for ImporterPropertiesModule" );
+					Debug.LogError( "Invalid properties for ImporterPropertiesImportTask" );
 					return;
 				}
 			}
 			
 			if( m_ImporterReferenceSerializedProperty != null )
-			{
-				using( var check = new EditorGUI.ChangeCheckScope() )
-				{
-					EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Importer Template" ), false );
-					if( check.changed )
-					{
-						m_Module.m_AssetImporter = null;
-						m_Module.GatherProperties();
-					}
-				}
-			}
+				ReferenceObjectGUI( layout );
 			
 			if( m_ImporterReferenceSerializedProperty.objectReferenceValue != null )
 			{
-				ConstrainToPropertiesArea( layout );
+				ConstrainToPropertiesGUI( layout );
 			}
 			else
 			{
@@ -63,13 +50,26 @@ namespace AssetTools
 				EditorGUI.HelpBox( r, "No template Object to constrain properties on.", MessageType.Warning );
 			}
 		}
+
+		private void ReferenceObjectGUI( ControlRect layout )
+		{
+			using( var check = new EditorGUI.ChangeCheckScope() )
+			{
+				EditorGUI.PropertyField( layout.Get(), m_ImporterReferenceSerializedProperty, new GUIContent( "Importer Template" ), false );
+				if( check.changed )
+				{
+					m_ImportTask.m_AssetImporter = null;
+					m_ImportTask.GatherProperties();
+				}
+			}
+		}
 		
-		private void ConstrainToPropertiesArea( ControlRect layout )
+		private void ConstrainToPropertiesGUI( ControlRect layout )
 		{
 			layout.Space( 10 );
 			EditorGUI.LabelField( layout.Get(), "Constrain to Properties:" );
 
-			Rect boxAreaRect = layout.Get( Mathf.Max( (m_Module.PropertyCount * layout.layoutHeight) + 6, 20 ) );
+			Rect boxAreaRect = layout.Get( Mathf.Max( (m_ImportTask.PropertyCount * layout.layoutHeight) + 6, 20 ) );
 			GUI.Box( boxAreaRect, GUIContent.none );
 
 			ControlRect subLayout = new ControlRect( boxAreaRect.x + 3, boxAreaRect.y + 3, boxAreaRect.width - 6, layout.layoutHeight )
@@ -78,9 +78,9 @@ namespace AssetTools
 			};
 			
 			// list all of the displayNames
-			for( int i = 0; i < m_Module.PropertyCount; ++i )
+			for( int i = 0; i < m_ImportTask.PropertyCount; ++i )
 			{
-				EditorGUI.LabelField( subLayout.Get(), m_Module.GetPropertyDisplayName( i ) );
+				EditorGUI.LabelField( subLayout.Get(), m_ImportTask.GetPropertyDisplayName( i ) );
 			}
 
 			Rect layoutRect = layout.Get();
@@ -88,9 +88,9 @@ namespace AssetTools
 			layoutRect.width = 100;
 			if( GUI.Button( layoutRect, "Edit Selection" ) )
 			{
-				string[] propertyNamesForReference = GetPropertyNames( new SerializedObject( m_Module.ReferenceAssetImporter ) );
+				string[] propertyNamesForReference = GetPropertyNames( new SerializedObject( m_ImportTask.ReferenceAssetImporter ) );
 				
-				m_Module.GatherPropertiesIfNeeded();
+				m_ImportTask.GatherPropertiesIfNeeded();
 				GenericMenu menu = new GenericMenu();
 				foreach( string propertyName in propertyNamesForReference )
 				{
@@ -99,8 +99,8 @@ namespace AssetTools
 					if( propertyName.Contains( "m_UserData" ) )
 						continue;
 					
-					bool isPropertySelected = m_Module.m_ConstrainProperties.Contains( propertyName );
-					string propertyDisplayName = m_Module.GetPropertyDisplayName( propertyName );
+					bool isPropertySelected = m_ImportTask.m_ConstrainProperties.Contains( propertyName );
+					string propertyDisplayName = m_ImportTask.GetPropertyDisplayName( propertyName );
 					menu.AddItem( new GUIContent( propertyDisplayName ), isPropertySelected, TogglePropertyConstraintSelected, propertyDisplayName );
 				}
 				
@@ -113,9 +113,9 @@ namespace AssetTools
 			string propertyName = selectedObject as string;
 			Assert.IsNotNull( propertyName );
 
-			for( int i = 0; i < m_Module.m_ConstrainPropertiesDisplayNames.Count; ++i )
+			for( int i = 0; i < m_ImportTask.m_ConstrainPropertiesDisplayNames.Count; ++i )
 			{
-				if( m_Module.m_ConstrainPropertiesDisplayNames[i].Equals( propertyName ) )
+				if( m_ImportTask.m_ConstrainPropertiesDisplayNames[i].Equals( propertyName ) )
 				{
 					m_ConstrainPropertiesSerializedProperty.DeleteArrayElementAtIndex( i );
 					return;
@@ -123,8 +123,8 @@ namespace AssetTools
 			}
 			
 			m_ConstrainPropertiesSerializedProperty.arraySize += 1;
-			m_ConstrainPropertiesSerializedProperty.GetArrayElementAtIndex( m_ConstrainPropertiesSerializedProperty.arraySize-1 ).stringValue = m_Module.GetPropertyRealName( propertyName ) ;
-			m_Module.GatherDisplayNames();
+			m_ConstrainPropertiesSerializedProperty.GetArrayElementAtIndex( m_ConstrainPropertiesSerializedProperty.arraySize-1 ).stringValue = m_ImportTask.GetPropertyRealName( propertyName ) ;
+			m_ImportTask.GatherDisplayNames();
 		}
 
 		private static string[] GetPropertyNames( SerializedObject serializedObject )

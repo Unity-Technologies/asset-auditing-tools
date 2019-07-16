@@ -67,7 +67,7 @@ namespace AssetTools
 			AssetImporter importerForPath = AssetImporter.GetAtPath( path );
 			if( importerForPath == null )
 			{
-				Debug.LogError( "Could not find m_Importer for " + path );
+				Debug.LogError( "Could not find AssetImporter for " + path );
 				return false;
 			}
 			return Conforms( importerForPath, filters );

@@ -38,7 +38,7 @@ namespace AssetTools
 			{
 				if( TemplateType == SerializedPropertyType.Generic )
 					return m_PropertyName;
-				return m_PropertyName + ",  <<<  " + ExpectedValue; // TODO this will be slow :O
+				return m_PropertyName + ",  <<<  " + ExpectedValue; // TODO this will be slow :O roadmap to have a table instead of a simple tree
 			}
 			set { m_PropertyName = value; }
 		}
@@ -50,7 +50,6 @@ namespace AssetTools
 		private SerializedProperty m_TemplateSerializedProperty;
 		private SerializedProperty m_AssetSerializedProperty;
 		
-
 		public PropertyConformObject( string name )
 		{
 			m_PropertyName = name;
@@ -115,12 +114,12 @@ namespace AssetTools
 			}
 		}
 
-		public bool ApplyConform( SerializedObject toObject )
+		public bool Apply( SerializedObject toObject )
 		{
 			toObject.CopyFromSerializedProperty( TemplateSerializedProperty );
 			if( !toObject.ApplyModifiedProperties() )
 			{
-				Debug.LogError( "Copying of SerialisedProperty failed" );
+				Debug.LogError( "Copying of SerialisedProperty failed for - " + toObject.targetObject.name );
 				return false;
 			}
 

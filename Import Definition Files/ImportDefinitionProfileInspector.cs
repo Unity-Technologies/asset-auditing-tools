@@ -10,10 +10,10 @@ using Object = System.Object;
 
 namespace AssetTools
 {
-	[CustomEditor( typeof(AuditProfile) )]
-	public class AuditProfileInspector : Editor
+	[CustomEditor( typeof(ImportDefinitionProfile) )]
+	public class ImportDefinitionProfileInspector : Editor
 	{
-		private AuditProfile m_Profile;
+		private ImportDefinitionProfile m_Profile;
 		
 		private SerializedProperty m_ProcessOnImport;
 		private SerializedProperty m_FolderOnly;
@@ -31,16 +31,16 @@ namespace AssetTools
 			m_ProcessOnImport = serializedObject.FindProperty( "m_RunOnImport" );
 			m_FolderOnly = serializedObject.FindProperty( "m_FilterToFolder" );
 			m_FiltersListProperty = serializedObject.FindProperty( "m_Filters" );
-			m_Modules = serializedObject.FindProperty( "m_Modules" );
+			m_Modules = serializedObject.FindProperty( "m_ImportTasks" );
 			m_SortIndex = serializedObject.FindProperty( "m_SortIndex" );
 			
-			m_ModuleTypes = ProfileCache.GetTypes<BaseModule>();
+			m_ModuleTypes = ImportDefinitionProfileCache.GetTypes<BaseImportTask>();
 		}
 		
 		public override void OnInspectorGUI()
 		{
 			if( m_Profile == null )
-				m_Profile = (AuditProfile) target;
+				m_Profile = (ImportDefinitionProfile) target;
 
 			Rect viewRect = new Rect( 18, 0, EditorGUIUtility.currentViewWidth-23, EditorGUIUtility.singleLineHeight );
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
@@ -143,15 +143,15 @@ namespace AssetTools
 					m_ModuleFoldoutStates.Add( true );
 				
 				SerializedProperty moduleProperty = m_Modules.GetArrayElementAtIndex( i );
-				BaseModule module = moduleProperty.objectReferenceValue as BaseModule;
-				if( module == null )
+				BaseImportTask importTask = moduleProperty.objectReferenceValue as BaseImportTask;
+				if( importTask == null )
 					continue;
 
 				if( i > 0 )
 					layout.Space( 10 );
 
 				Rect headerRect = layout.Get( 20 );
-				m_ModuleFoldoutStates[i] = EditorGUI.Foldout( headerRect, m_ModuleFoldoutStates[i], module.name, true );
+				m_ModuleFoldoutStates[i] = EditorGUI.Foldout( headerRect, m_ModuleFoldoutStates[i], importTask.name, true );
 				
 				Event current = Event.current;
 				if( headerRect.Contains( current.mousePosition ) )
@@ -175,7 +175,7 @@ namespace AssetTools
 				{
 					layout.BeginArea( 5, 5 );
 
-					module.DrawGUI( layout );
+					importTask.DrawGUI( layout );
 
 					GUI.depth = GUI.depth - 1;
 					GUI.Box( layout.EndArea(), "" );
@@ -231,12 +231,12 @@ namespace AssetTools
 			Type t = context as Type;
 			Assert.IsNotNull( t, "Null Module Type" );
 
-			BaseModule addedModule = m_Profile.AddModule( t );
-			if( addedModule != null )
+			BaseImportTask addedImportTask = m_Profile.AddModule( t );
+			if( addedImportTask != null )
 			{
 				// keep the serialised property in sync
 				m_Modules.arraySize++;
-				m_Modules.GetArrayElementAtIndex( m_Modules.arraySize-1 ).objectReferenceValue = addedModule;
+				m_Modules.GetArrayElementAtIndex( m_Modules.arraySize-1 ).objectReferenceValue = addedImportTask;
 				m_ModuleFoldoutStates.Add( true );
 				
 				EditorUtility.SetDirty( m_Profile );

@@ -10,7 +10,7 @@ using UnityEngine;
 namespace AssetTools
 {
 	[System.Serializable]
-	public abstract class BaseModule : ScriptableObject, IImportProcessModule
+	public abstract class BaseImportTask : ScriptableObject, IImportTask
 	{
 		protected List<string> m_AssetsToForceApply = new List<string>();
 		protected string m_SearchFilter = "";
@@ -26,13 +26,10 @@ namespace AssetTools
 				return m_SelfSerializedObject;
 			}
 		}
-
-		public virtual bool CanProcess( AssetImporter item )
-		{
-			return true;
-		}
 		
 		public abstract string AssetMenuFixString { get; }
+
+		public abstract bool CanProcess( AssetImporter item );
 
 		public bool IsManuallyProcessing( AssetImporter item )
 		{
@@ -69,7 +66,9 @@ namespace AssetTools
 			so.ApplyModifiedProperties();
 		}
 
-		public abstract List<IConformObject> GetConformObjects( string asset, AuditProfile profile );
+		public abstract List<IConformObject> GetConformObjects( string asset, ImportDefinitionProfile profile );
+		
+		public abstract Type GetConformObjectType();
 
 		public virtual bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
 		{
@@ -77,9 +76,7 @@ namespace AssetTools
 			return true;
 		}
 
-		public abstract Type GetConformObjectType();
-		
-		public virtual bool Apply( AssetImporter importer, AuditProfile fromProfile )
+		public virtual bool Apply( AssetImporter importer, ImportDefinitionProfile fromProfile )
 		{
 			if( CanProcess( importer ) == false )
 				return false;

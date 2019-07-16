@@ -10,10 +10,10 @@ namespace AssetTools
 	{
 		private class AssetViewItemMenuContext
 		{
-			public List<IImportProcessModule> m_Modules;
+			public List<IImportTask> m_Modules;
 			public List<AssetsTreeViewItem> m_Items;
 
-			public AssetViewItemMenuContext( List<IImportProcessModule> modules, List<AssetsTreeViewItem> items )
+			public AssetViewItemMenuContext( List<IImportTask> modules, List<AssetsTreeViewItem> items )
 			{
 				m_Modules = modules;
 				m_Items = items;
@@ -22,7 +22,7 @@ namespace AssetTools
 		
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 		
-		public AuditProfile m_Profile;
+		public ImportDefinitionProfile m_Profile;
 		private readonly List<AssetsTreeViewItem> m_SelectedItems = new List<AssetsTreeViewItem>();
 		internal ModularDetailTreeView m_ModularTreeView;
 
@@ -45,7 +45,7 @@ namespace AssetTools
 			return root;
 		}
 
-		private void GenerateTreeElements( AuditProfile profile, TreeViewItem root )
+		private void GenerateTreeElements( ImportDefinitionProfile profile, TreeViewItem root )
 		{
 			List<string> associatedAssets = GetFilteredAssets( profile );
 
@@ -76,7 +76,7 @@ namespace AssetTools
 
 				AssetsTreeViewItem active = assetsesTreeFolder;
 				
-				List<ModuleConformData> conformData = profile.GetConformData( assetPath );
+				List<ConformData> conformData = profile.GetConformData( assetPath );
 				bool result = true;
 				for( int i = 0; i < conformData.Count; ++i )
 				{
@@ -140,7 +140,7 @@ namespace AssetTools
 			}
 		}
 
-		private List<string> GetFilteredAssets( AuditProfile profile )
+		private List<string> GetFilteredAssets( ImportDefinitionProfile profile )
 		{
 			List<string> associatedAssets = new List<string>();
 			List<string> ignorePaths = new List<string>();
@@ -149,14 +149,14 @@ namespace AssetTools
 			List<string> GUIDs;
 			
 			// TODO this is probably inefficient, profile and see if there is a more efficient design needed
-			if( m_Profile.m_Modules.Count > 0 )
+			if( m_Profile.m_ImportTasks.Count > 0 )
 			{
-				m_Profile.m_Modules[0].GetSearchFilter( out searchFilter, ignorePaths );
+				m_Profile.m_ImportTasks[0].GetSearchFilter( out searchFilter, ignorePaths );
 				GUIDs = new List<string>( AssetDatabase.FindAssets( searchFilter ) );
 				
-				for( int i = 1; i < m_Profile.m_Modules.Count; ++i )
+				for( int i = 1; i < m_Profile.m_ImportTasks.Count; ++i )
 				{
-					m_Profile.m_Modules[i].GetSearchFilter( out searchFilter, ignorePaths );
+					m_Profile.m_ImportTasks[i].GetSearchFilter( out searchFilter, ignorePaths );
 					string[] moduleGUIDs = AssetDatabase.FindAssets( searchFilter );
 					for( int m = GUIDs.Count - 1; m >= 0; --m )
 					{
@@ -293,12 +293,12 @@ namespace AssetTools
 				return;
 			
 			GenericMenu menu = new GenericMenu();
-			List<IImportProcessModule> all = new List<IImportProcessModule>(m_Profile.m_Modules.Count);
-			for( int i = 0; i < m_Profile.m_Modules.Count; ++i )
+			List<IImportTask> all = new List<IImportTask>(m_Profile.m_ImportTasks.Count);
+			for( int i = 0; i < m_Profile.m_ImportTasks.Count; ++i )
 			{
-				menu.AddItem( new GUIContent( m_Profile.m_Modules[i].AssetMenuFixString ), false, ContextMenuSelectionCallback, 
-					new AssetViewItemMenuContext( new List<IImportProcessModule>{ m_Profile.m_Modules[i] }, selectedItems ) );
-				all.Add( m_Profile.m_Modules[i] );
+				menu.AddItem( new GUIContent( m_Profile.m_ImportTasks[i].AssetMenuFixString ), false, ContextMenuSelectionCallback, 
+					new AssetViewItemMenuContext( new List<IImportTask>{ m_Profile.m_ImportTasks[i] }, selectedItems ) );
+				all.Add( m_Profile.m_ImportTasks[i] );
 			}
 			menu.AddItem( new GUIContent( "All" ), false, ContextMenuSelectionCallback,
 				new AssetViewItemMenuContext( all, selectedItems ) );
@@ -351,15 +351,15 @@ namespace AssetTools
 			}
 			AssetDatabase.StopAssetEditing();
 
-			foreach( IImportProcessModule module in menuContext.m_Modules )
+			foreach( IImportTask module in menuContext.m_Modules )
 			{
 				Type conformObjectType = module.GetConformObjectType();
 				for( int i = 0; i < assets.Count; ++i )
 				{
 					// TODO confirm that it now conforms, currently just set everything as Conforms
-					foreach( ModuleConformData data in assets[i].conformData )
+					foreach( ConformData data in assets[i].conformData )
 					{
-						foreach( IConformObject conformObject in data.m_ConformObjects )
+						foreach( IConformObject conformObject in data.ConformObjects )
 						{
 							if( conformObject.GetType() == conformObjectType )
 								SetConformObjectRecursive( conformObject, true, conformObjectType );

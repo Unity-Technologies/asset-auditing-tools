@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace AssetTools
 {
+	
 	public class ProcessorMethodInfo
 	{
 		private readonly Type m_Type;

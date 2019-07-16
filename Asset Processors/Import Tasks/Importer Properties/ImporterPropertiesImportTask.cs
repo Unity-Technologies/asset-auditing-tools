@@ -10,8 +10,18 @@ using UnityEngine;
 
 namespace AssetTools
 {
+	public enum AssetType
+	{
+		Texture,
+		Model,
+		Audio,
+		Folder,
+		Native,
+		NA
+	}
+	
 	[System.Serializable]
-	public class ImporterPropertiesModule : BaseModule
+	public class ImporterPropertiesImportTask : BaseImportTask
 	{
 		public UnityEngine.Object m_ImporterReference = null;
 		
@@ -28,7 +38,7 @@ namespace AssetTools
 		
 		internal AssetImporter m_AssetImporter;
 		
-		private ImporterPropertiesModuleInspector m_Inspector = null;
+		private ImporterPropertiesImportTaskInspector m_Inspector = null;
 		
 		public override Type GetConformObjectType()
 		{
@@ -43,10 +53,7 @@ namespace AssetTools
 		private AssetType GetAssetType()
 		{
 			if( m_ImporterReference == null )
-			{
-				//Debug.LogError( string.Format("Template not set in Profile \"{0}\"", name) );
 				return AssetType.NA;
-			}
 
 			string path = AssetDatabase.GetAssetPath( m_ImporterReference );
 			AssetImporter a = AssetImporter.GetAtPath( path );
@@ -59,7 +66,6 @@ namespace AssetTools
 			if( a is AudioImporter )
 				return AssetType.Audio;
 			
-			//throw new IndexOutOfRangeException( string.Format( "ReferenceAssetImporter {0}, not a supported Type", a.GetType().Name ) );
 			return AssetType.Native;
 		}
 		
@@ -67,7 +73,6 @@ namespace AssetTools
 		{
 			return AssetImporter.GetAtPath( AssetDatabase.GetAssetPath( m_ImporterReference ) );
 		}
-
 		
 		public AssetImporter ReferenceAssetImporter
 		{
@@ -90,27 +95,11 @@ namespace AssetTools
 		
 		public override bool CanProcess( AssetImporter item )
 		{
-			if( m_ImporterReference == null )
-				return false;
-			if( ReferenceAssetImporter == item )
+			if( m_ImporterReference == null || ReferenceAssetImporter == item )
 				return false;
 			
-			Type t = item.GetType();
-			Type it = ReferenceAssetImporter.GetType();
-			if( t != it )
-				return false;
-			
-			if( m_AssetsToForceApply.Contains( item.assetPath ) )
-				return true;
-			
-			// TODO do checks to make sure it is valid
-			
-			// 
-			
-			return true;
+			return item.GetType() == ReferenceAssetImporter.GetType();
 		}
-
-		
 		
 		public override bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
 		{
@@ -143,7 +132,7 @@ namespace AssetTools
 			return false;
 		}
 		
-		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
+		public override List<IConformObject> GetConformObjects( string asset, ImportDefinitionProfile profile )
 		{
 			AssetImporter assetImporter = AssetImporter.GetAtPath( asset );
 			if( m_ImporterReference == null )
@@ -152,7 +141,7 @@ namespace AssetTools
 			SerializedObject assetImporterSO = new SerializedObject( assetImporter );
 			SerializedObject profileImporterSO = new SerializedObject( ReferenceAssetImporter );
 			
-			// TODO if there are any. check to make sure these are valid constraints, if not, don't include them in the count 
+			// TODO Performance: if there are any. check to make sure these are valid constraints, if not, don't include them in the count 
 			if( m_ConstrainProperties.Count == 0 )
 			{
 				return CompareSerializedObject( profileImporterSO, assetImporterSO );
@@ -175,6 +164,7 @@ namespace AssetTools
 			return infos;
 		}
 
+		// TODO no longer used, would this be a good public API?
 		internal void AddProperty( string propName, bool isRealName = true )
 		{
 			GatherPropertiesIfNeeded();
@@ -316,7 +306,8 @@ namespace AssetTools
 					continue;
 				}
 				
-				// TODO better way to do this? could use utility method to get all properties in one loop?? (this may not work, NextVisible will not work this way)
+				// TODO Performance: Is there a better way to find the properties?
+				// possibly could use utility method to get all properties in one loop?? (this may not work, NextVisible will not work this way)
 				PropertyConformObject conformObject = new PropertyConformObject( templateIter.name );
 				conformObject.SetSerializedProperties( template.FindProperty( templateIter.name ), asset.FindProperty( assetIter.name ) );
 				infos.Add( conformObject );
@@ -327,7 +318,7 @@ namespace AssetTools
 			return infos;
 		}
 		
-		public override bool Apply( AssetImporter importer, AuditProfile fromProfile )
+		public override bool Apply( AssetImporter importer, ImportDefinitionProfile fromProfile )
 		{
 			if( CanProcess( importer ) == false )
 				return false;
@@ -362,7 +353,7 @@ namespace AssetTools
 		public override void DrawGUI( ControlRect layout )
 		{
 			if( m_Inspector == null )
-				m_Inspector = new ImporterPropertiesModuleInspector();
+				m_Inspector = new ImporterPropertiesImportTaskInspector();
 			
 			m_Inspector.Draw( SelfSerializedObject, layout );
 			SelfSerializedObject.ApplyModifiedProperties();

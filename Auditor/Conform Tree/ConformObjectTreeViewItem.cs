@@ -33,7 +33,7 @@ namespace AssetTools
 
 		public void ApplyConform()
 		{
-			if( conformObject.ApplyConform( AssetsTreeViewItem.assetObject ) )
+			if( conformObject.Apply( AssetsTreeViewItem.assetObject ) )
 			{
 				conformObject.Conforms = true;
 				m_Conforms = true;

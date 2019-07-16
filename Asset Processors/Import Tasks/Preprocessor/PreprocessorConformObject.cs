@@ -6,7 +6,6 @@ using UnityEditor;
 
 namespace AssetTools
 {
-
 	public class PreprocessorConformObject : IConformObject
 	{
 		public bool Conforms
@@ -64,7 +63,7 @@ namespace AssetTools
 			get { return m_MethodVersion.ToString(); }
 		}
 		
-		public bool ApplyConform( SerializedObject toObject )
+		public bool Apply( SerializedObject toObject )
 		{
 			return false;
 		}
@@ -84,12 +83,19 @@ namespace AssetTools
 			}
 		}
 
-		public PreprocessorConformObject( string name, int importedVersion, int methodVersion )
+		public PreprocessorConformObject( string name, int methodVersion )
 		{
 			// method name and importedVersion for the method in question. (may need to get it when checking conforms instead)
 			m_MethodName = name;
-			m_ImportedVersion = importedVersion;
 			m_MethodVersion = methodVersion;
+		}
+		
+		public PreprocessorConformObject( string name, int methodVersion, int importedVersion )
+		{
+			// method name and importedVersion for the method in question. (may need to get it when checking conforms instead)
+			m_MethodName = name;
+			m_MethodVersion = methodVersion;
+			m_ImportedVersion = importedVersion;
 		}
 
 

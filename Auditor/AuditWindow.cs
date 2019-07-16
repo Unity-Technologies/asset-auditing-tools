@@ -14,7 +14,7 @@ namespace AssetTools
 		private TreeViewState m_PropertyListState;
 		private ModularDetailTreeView m_ModularTreeView;
 		
-		private List<AuditProfile> profiles;
+		private List<ImportDefinitionProfile> profiles;
 		private List<string> profileNames;
 		
 		private int selected;
@@ -74,7 +74,7 @@ namespace AssetTools
 
 		private void RefreshData()
 		{
-			profiles = new List<AuditProfile>();
+			profiles = new List<ImportDefinitionProfile>();
 			profileNames = new List<string>();
 			GetAuditorProfiles( );
 			
@@ -107,17 +107,19 @@ namespace AssetTools
 		
 		void GetAuditorProfiles(  )
 		{
-			string[] auditorProfileGUIDs = AssetDatabase.FindAssets( "t:AuditProfile" );
+			string[] auditorProfileGUIDs = AssetDatabase.FindAssets( "t:ImportDefinitionProfile" );
 
 			profiles.Clear();
 			foreach( string asset in auditorProfileGUIDs )
 			{
 				string guidToAssetPath = AssetDatabase.GUIDToAssetPath( asset );
-				profiles.Add( AssetDatabase.LoadAssetAtPath<AuditProfile>( guidToAssetPath ) );
+				ImportDefinitionProfile profile = AssetDatabase.LoadAssetAtPath<ImportDefinitionProfile>( guidToAssetPath );
+				if( profile != null )
+					profiles.Add( profile );
 			}
 
 			profileNames.Clear();
-			foreach( AuditProfile assetRule in profiles )
+			foreach( ImportDefinitionProfile assetRule in profiles )
 			{
 				profileNames.Add( assetRule.name );
 			}

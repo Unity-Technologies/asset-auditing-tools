@@ -55,15 +55,15 @@ namespace AssetTools
 				conformObjectAssetRoot.children = new List<TreeViewItem>();
 			root.AddChild( conformObjectAssetRoot );
 
-			List<ModuleConformData> data = assetsTreeItem.conformData;
+			List<ConformData> data = assetsTreeItem.conformData;
 			
 			for( int i = 0; i < data.Count; ++i )
 			{
-				if( data[i].m_ConformObjects.Count == 0 )
+				if( data[i].ConformObjects.Count == 0 )
 					continue;
 				
 				// TODO some unique way incase we have multiple modules of the same type
-				string moduleName = data[i].m_Module.GetType().Name;
+				string moduleName = data[i].ImportTask.GetType().Name;
 				ConformObjectTreeViewItem conformObjectModuleRoot = new ConformObjectTreeViewItem( moduleName.GetHashCode(), 1, moduleName, true );
 				if( conformObjectModuleRoot.children == null )
 					conformObjectModuleRoot.children = new List<TreeViewItem>();
@@ -75,7 +75,7 @@ namespace AssetTools
 					conformObjectAssetRoot.conforms = false;
 				}
 
-				foreach( var conformObject in data[i].m_ConformObjects )
+				foreach( var conformObject in data[i].ConformObjects )
 				{
 					conformObject.AddTreeViewItems( activePath, conformObjectModuleRoot, assetsTreeItem, 2 );
 				}

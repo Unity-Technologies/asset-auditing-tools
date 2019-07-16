@@ -5,21 +5,21 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	public class PreprocessorModuleInspector
+	public class PreprocessorImportTaskInspector
 	{
-		private PreprocessorModule m_Module;
+		private PreprocessorImportTask m_ImportTask;
 		
 		private SerializedProperty m_MethodSerializedProperty;
 		private SerializedProperty m_DataSerializedProperty;
 
 		public void Draw( SerializedObject moduleObject, ControlRect layout )
 		{
-			if( m_Module == null )
+			if( m_ImportTask == null )
 			{
-				m_Module = moduleObject.targetObject as PreprocessorModule;
-				if( m_Module == null )
+				m_ImportTask = moduleObject.targetObject as PreprocessorImportTask;
+				if( m_ImportTask == null )
 				{
-					Debug.LogError( "SerializedObject must be of type PreprocessorModule" );
+					Debug.LogError( "SerializedObject must be of type PreprocessorImportTask" );
 					return;
 				}
 			}
@@ -32,7 +32,7 @@ namespace AssetTools
 				m_DataSerializedProperty = properties[1];
 				if( m_MethodSerializedProperty == null || m_DataSerializedProperty == null )
 				{
-					Debug.LogError( "Invalid properties for PreprocessorModule" );
+					Debug.LogError( "Invalid properties for PreprocessorImportTask" );
 					return;
 				}
 			}
@@ -45,16 +45,16 @@ namespace AssetTools
 			for( int i=1; i<methods.Count+1; ++i )
 			{
 				contents[i] = new GUIContent(methods[i-1].TypeName);
-				if( !string.IsNullOrEmpty( m_Module.methodString ) )
+				if( !string.IsNullOrEmpty( m_ImportTask.methodString ) )
 				{
-					if( string.Equals( m_Module.methodString, methods[i - 1].TypeName + ", " + methods[i - 1].AssemblyName ) )
+					if( string.Equals( m_ImportTask.methodString, methods[i - 1].TypeName + ", " + methods[i - 1].AssemblyName ) )
 						selectedMethod = i;
 				}
 			}
 
-			if( !string.IsNullOrEmpty( m_Module.methodString ) && selectedMethod == 0 )
+			if( !string.IsNullOrEmpty( m_ImportTask.methodString ) && selectedMethod == 0 )
 			{
-				Debug.LogError( "methodString not found in project : " + m_Module.methodString );
+				Debug.LogError( "methodString not found in project : " + m_ImportTask.methodString );
 			}
 
 			EditorGUI.BeginChangeCheck();
@@ -69,7 +69,7 @@ namespace AssetTools
 					if( id >= 0 )
 					{
 						m_MethodSerializedProperty.stringValue = methods[id].TypeName + ", " + methods[id].AssemblyName;
-						m_Module.m_ProcessorMethodInfo = null;
+						m_ImportTask.m_ProcessorMethodInfo = null;
 					}
 				}
 			}

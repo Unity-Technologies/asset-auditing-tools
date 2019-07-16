@@ -12,7 +12,7 @@ namespace AssetTools
 		public string path = "";
 		public bool isAsset;
 
-		public List<ModuleConformData> conformData;
+		public List<ConformData> conformData;
 		public SerializedObject assetObject;
 		
 

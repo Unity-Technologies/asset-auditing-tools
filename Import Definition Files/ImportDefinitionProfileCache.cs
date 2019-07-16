@@ -6,31 +6,29 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	struct AuditProfileData : IComparer<AuditProfileData>, IComparable<AuditProfileData>
+	struct ProfileData : IComparer<ProfileData>, IComparable<ProfileData>
 	{
-		public string m_FolderPath;
-		// TODO probably dont need this
 		public string m_AssetPath;
-		public AuditProfile m_AuditProfile;
-		public int Compare( AuditProfileData x, AuditProfileData y )
+		public ImportDefinitionProfile m_ImportDefinitionProfile;
+		public int Compare( ProfileData x, ProfileData y )
 		{
-			return x.m_AuditProfile.CompareTo( y.m_AuditProfile );
+			return x.m_ImportDefinitionProfile.CompareTo( y.m_ImportDefinitionProfile );
 		}
 
-		public int CompareTo( AuditProfileData other )
+		public int CompareTo( ProfileData other )
 		{
-			return m_AuditProfile.CompareTo( other.m_AuditProfile );
+			return m_ImportDefinitionProfile.CompareTo( other.m_ImportDefinitionProfile );
 		}
 	}
 
-	public class ProfileCache : AssetPostprocessor
+	public class ImportDefinitionProfileCache : AssetPostprocessor
 	{
-		private static List<AuditProfileData> s_Profiles = new List<AuditProfileData>();
+		private static List<ProfileData> s_Profiles = new List<ProfileData>();
 		
 		/// <summary>
 		/// A List of AuditProfiles within the project and their locations
 		/// </summary>
-		internal static List<AuditProfileData> Profiles
+		internal static List<ProfileData> Profiles
 		{
 			get
 			{
@@ -45,16 +43,15 @@ namespace AssetTools
 		private static void RefreshCacheObjects()
 		{
 			s_Profiles.Clear();
-			string[] guids = AssetDatabase.FindAssets( "t:AuditProfile" );
+			string[] guids = AssetDatabase.FindAssets( "t:ImportDefinitionProfile" );
 			for( int i = 0; i < guids.Length; ++i )
 			{
 				string path = AssetDatabase.GUIDToAssetPath( guids[i] );
-				AuditProfile profile = AssetDatabase.LoadAssetAtPath<AuditProfile>( path );
-				s_Profiles.Add( new AuditProfileData
+				ImportDefinitionProfile profile = AssetDatabase.LoadAssetAtPath<ImportDefinitionProfile>( path );
+				s_Profiles.Add( new ProfileData
 				{
 					m_AssetPath = path,
-					m_FolderPath = path.Remove( path.LastIndexOf( '/' ) ),
-					m_AuditProfile = profile
+					m_ImportDefinitionProfile = profile
 				} );
 			}
 			s_Profiles.Sort();
@@ -76,10 +73,9 @@ namespace AssetTools
 				{
 					if( s_Profiles[d].m_AssetPath == movedFromAssetPaths[i] )
 					{
-						AuditProfileData def = s_Profiles[d];
+						ProfileData def = s_Profiles[d];
 						def.m_AssetPath = movedToAssetPaths[i];
-						def.m_FolderPath = def.m_AssetPath.Remove( def.m_AssetPath.LastIndexOf( '/' ) );
-						def.m_AuditProfile.DirectoryPath = null;
+						def.m_ImportDefinitionProfile.DirectoryPath = null;
 						s_Profiles[d] = def;
 						break;
 					}
@@ -90,7 +86,7 @@ namespace AssetTools
 			{
 				if( importedAssets[i].EndsWith( ".asset" ) == false )
 					continue;
-				AuditProfile profile = AssetDatabase.LoadAssetAtPath<AuditProfile>( importedAssets[i] );
+				ImportDefinitionProfile profile = AssetDatabase.LoadAssetAtPath<ImportDefinitionProfile>( importedAssets[i] );
 				if( profile == null )
 					continue;
 
@@ -106,10 +102,9 @@ namespace AssetTools
 
 				if( !isInCache )
 				{
-					AuditProfileData item = new AuditProfileData();
+					ProfileData item = new ProfileData();
 					item.m_AssetPath = importedAssets[i];
-					item.m_FolderPath = item.m_AssetPath.Remove( item.m_AssetPath.LastIndexOf( '/' ) );
-					item.m_AuditProfile = profile;
+					item.m_ImportDefinitionProfile = profile;
 					profile.DirectoryPath = null;
 					s_Profiles.Add( item );
 				}

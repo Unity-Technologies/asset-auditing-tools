@@ -21,7 +21,7 @@ namespace AssetTools
 			public string importDefinitionGUID;
 			
 			/// <summary>
-			/// The module name of the module that processed this asset
+			/// The importTask name of the importTask that processed this asset
 			/// </summary>
 			public string moduleName;
 			

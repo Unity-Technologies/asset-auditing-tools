@@ -7,18 +7,18 @@ using UnityEngine;
 namespace AssetTools
 {
 	[Serializable]
-	public class PreprocessorModule : BaseModule
+	public class PreprocessorImportTask : BaseImportTask
 	{
 		/// <summary>
 		/// TODO If any of this is changed, do the Assets imported by it need to be reimported?
 		/// </summary>
 		
-		private const string kModuleName = "PreprocessorModule";
+		private const string kImportTaskName = "PreprocessorImportTask";
 		
 		[SerializeField] private string m_MethodString = "";
 		[SerializeField] private string m_Data = "";
 
-		private PreprocessorModuleInspector m_Inspector = null;
+		private PreprocessorImportTaskInspector m_Inspector = null;
 		internal ProcessorMethodInfo m_ProcessorMethodInfo;
 		
 		public string methodString
@@ -38,8 +38,13 @@ namespace AssetTools
 				return Method == null ? "None Selected" : "Import using " + Method.TypeName;
 			}
 		}
+		
+		public override bool CanProcess( AssetImporter item )
+		{
+			return true;
+		}
 
-		public override List<IConformObject> GetConformObjects( string asset, AuditProfile profile )
+		public override List<IConformObject> GetConformObjects( string asset, ImportDefinitionProfile profile )
 		{
 			// Preprocessor versionCode comparison
 			// will need someway to store this. It could not work well if imported not using it
@@ -51,7 +56,7 @@ namespace AssetTools
 
 			if( Method == null )
 			{
-				PreprocessorConformObject conformObject = new PreprocessorConformObject( "None Selected", 0, 0 );
+				PreprocessorConformObject conformObject = new PreprocessorConformObject( "None Selected", 0 );
 				infos.Add( conformObject );
 				return infos;
 			}
@@ -64,7 +69,7 @@ namespace AssetTools
 			{
 				for( int i = 0; i < data.Count; ++i )
 				{
-					if( data[i].moduleName != kModuleName ||
+					if( data[i].moduleName != kImportTaskName ||
 					    data[i].typeName != Method.TypeName ||
 					    data[i].assemblyName != Method.AssemblyName ||
 					    data[i].importDefinitionGUID != profileGuid )
@@ -77,21 +82,21 @@ namespace AssetTools
 			}
 			else
 			{
-				PreprocessorConformObject conformObject = new PreprocessorConformObject( Method.TypeName, int.MinValue, Method.Version );
+				PreprocessorConformObject conformObject = new PreprocessorConformObject( Method.TypeName, Method.Version );
 				infos.Add( conformObject );
 			}
 			return infos;
 		}
 		
-		private void SetUserData( AssetImporter importer, AuditProfile profile )
+		private void SetUserData( AssetImporter importer, ImportDefinitionProfile profile )
 		{
 			UserDataSerialization data = UserDataSerialization.Get( importer.assetPath );
 			string profileGuid = AssetDatabase.AssetPathToGUID( AssetDatabase.GetAssetPath( profile ) );
-			data.m_ImporterPostprocessorData.UpdateOrAdd( new UserDataSerialization.PostprocessorData( profileGuid, kModuleName, Method.AssemblyName, Method.TypeName, Method.Version ) );
+			data.m_ImporterPostprocessorData.UpdateOrAdd( new UserDataSerialization.PostprocessorData( profileGuid, kImportTaskName, Method.AssemblyName, Method.TypeName, Method.Version ) );
 			data.UpdateImporterUserData();
 		}
 		
-		public override bool Apply( AssetImporter item, AuditProfile fromProfile )
+		public override bool Apply( AssetImporter item, ImportDefinitionProfile fromProfile )
 		{
 			if( string.IsNullOrEmpty( m_MethodString ) == false )
 			{
@@ -159,7 +164,7 @@ namespace AssetTools
 		public override void DrawGUI( ControlRect layout )
 		{
 			if( m_Inspector == null )
-				m_Inspector = new PreprocessorModuleInspector();
+				m_Inspector = new PreprocessorImportTaskInspector();
 			
 			m_Inspector.Draw( SelfSerializedObject, layout );
 			SelfSerializedObject.ApplyModifiedProperties();
