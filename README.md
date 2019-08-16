@@ -46,7 +46,6 @@ Import Definition Profiles
 - New Import Tasks
     - 2018+ new task "PresetPropertiesImportTask", this will be good for both importer properties and other objects
     - PostProcessingMethod task, same as Pre but for Post
-- Context data or Injection of data(probably not needed, need to review) to allow moving of data across tasks
 - Look into if MonoScript cache should be used for IPreprocessor. Paving the path to no longer being reliant on AssetImporter.userData for importer versioning. With AssetDatabase V2 we can set custom dependencies for Assets. Allowing an Asset to have a dependency on the MonoScript.
     - This would still need a way of saving what versions they were previously imported with for auditing. 
 - Track movement and changes to profiles to reimport any Assets where necessary.

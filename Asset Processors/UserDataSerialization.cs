@@ -10,6 +10,9 @@ namespace AssetTools
 {
 	public class UserDataSerialization
 	{
+		private static List<UserDataSerialization> m_Cache = new List<UserDataSerialization>();
+		
+		
 		const string searchString = "\"ImportDefinitionFiles\": { ";
 		
 		[Serializable]
@@ -79,13 +82,32 @@ namespace AssetTools
 			}
 		}
 		
-		public PostprocessorDataList m_ImporterPostprocessorData;
-		public AssetImporter m_Importer;
+		
+		
+		
+		private PostprocessorDataList m_ImporterPostprocessorData;
+		private AssetImporter m_Importer;
 		
 		private int m_UserDataStartIndex;
 		private int m_UserDataEndIndex;
-		
-		private static List<UserDataSerialization> m_Cache = new List<UserDataSerialization>();
+
+		public List<PostprocessorData> GetPostprocessorData()
+		{
+			// TODO make a copy?
+			return m_ImporterPostprocessorData.assetProcessedWith;
+		}
+
+		public UserDataSerialization( string assetPath )
+		{
+			m_Importer = AssetImporter.GetAtPath( assetPath );
+			if( m_Importer == null )
+			{
+				Debug.LogError( "Could not find AssetImporter for " + assetPath );
+				return;
+			}
+			
+			ParseMetaFile();
+		}
 
 		/// <summary>
 		/// Get a userData representation for processing on the asset at assetPath
@@ -107,21 +129,23 @@ namespace AssetTools
 				}
 			}
 
-			m_Cache.Add( ParseForAssetPath( assetPath ) );
-			return m_Cache[m_Cache.Count-1];
+			UserDataSerialization ud = new UserDataSerialization( assetPath );
+			if( ud.m_Importer != null )
+			{
+				m_Cache.Add(ud);
+				return m_Cache[m_Cache.Count - 1];
+			}
+			else
+			{
+				return null;
+			}
 		}
 		
-		/// <summary>
-		/// Parses the userData for the assetPath to PostprocessorData 
-		/// </summary>
-		/// <param name="assetPath"></param>
-		/// <returns></returns>
-		private static UserDataSerialization ParseForAssetPath( string assetPath )
+		private void ParseMetaFile()
 		{
-			AssetImporter importer = AssetImporter.GetAtPath( assetPath );
-			Assert.IsNotNull( importer );
+			Assert.IsNotNull( m_Importer );
 			
-			string userData = importer.userData;
+			string userData = m_Importer.userData;
 			int idfStartIndex = userData.IndexOf( searchString, StringComparison.Ordinal );
 			int idfEndIndex = -1;
 			
@@ -147,22 +171,20 @@ namespace AssetTools
 
 				string str = userData.Substring( startIndex, idfEndIndex - startIndex );
 				importersPostprocessorData = JsonUtility.FromJson<PostprocessorDataList>( str );
-				//idfEndIndex += 2;
 			}
 			
-			UserDataSerialization returnData = new UserDataSerialization();
-			returnData.m_Importer = importer;
-			returnData.m_ImporterPostprocessorData = importersPostprocessorData;
-			returnData.m_UserDataStartIndex = idfStartIndex;
-			returnData.m_UserDataEndIndex = idfEndIndex;
-
-			return returnData;
+			m_ImporterPostprocessorData = importersPostprocessorData;
+			m_UserDataStartIndex = idfStartIndex;
+			m_UserDataEndIndex = idfEndIndex;
 		}
 
-		/// <summary>
-		/// Set the userData for this Object
-		/// </summary>
-		public void UpdateImporterUserData()
+		public void UpdateProcessing( PostprocessorData d )
+		{
+			m_ImporterPostprocessorData.UpdateOrAdd( d );
+			SaveMetaData();
+		}
+		
+		private void SaveMetaData()
 		{
 			string json = JsonUtility.ToJson( m_ImporterPostprocessorData );
 			string importDefinitionFileUserData = "\"ImportDefinitionFiles\": { " + json + " }";
@@ -170,7 +192,12 @@ namespace AssetTools
 			string userData = m_Importer.userData;
 			if( m_UserDataStartIndex >= 0 && m_UserDataEndIndex > m_UserDataStartIndex )
 			{
-				if( importDefinitionFileUserData == userData.Substring( m_UserDataStartIndex, m_UserDataEndIndex - m_UserDataStartIndex ) )
+				int length = m_UserDataEndIndex - m_UserDataStartIndex;
+				if( userData.Length < m_UserDataStartIndex + length )
+				{
+					Debug.LogError( "Problem setting user data" );
+				}
+				if( importDefinitionFileUserData == userData.Substring( m_UserDataStartIndex, length ) )
 					return;
 				
 				userData = userData.Remove( m_UserDataStartIndex, m_UserDataEndIndex - m_UserDataStartIndex );
@@ -182,6 +209,9 @@ namespace AssetTools
 			m_UserDataEndIndex = importDefinitionFileUserData.Length + m_UserDataStartIndex;
 			EditorUtility.SetDirty( m_Importer );
 			AssetDatabase.WriteImportSettingsIfDirty( m_Importer.assetPath );
+			
+			// TODO need to update the anchor points in a more optimised way
+			ParseMetaFile();
 		}
 	}
 

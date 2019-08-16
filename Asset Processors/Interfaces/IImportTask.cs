@@ -25,6 +25,6 @@ namespace AssetTools
 		
 		System.Type GetConformObjectType();
 
-		bool Apply( AssetImporter importer, ImportDefinitionProfile profile );
+		bool Apply( ImportContext context, ImportDefinitionProfile profile );
 	}
 }

@@ -45,6 +45,11 @@ namespace AssetTools
 			return typeof(PropertyConformObject);
 		}
 		
+		public override ProcessingType TaskProcessType
+		{
+			get { return ProcessingType.Pre; }
+		}
+		
 		public override string AssetMenuFixString
 		{
 			get { return "Conform to Importer Template Properties"; }
@@ -318,23 +323,23 @@ namespace AssetTools
 			return infos;
 		}
 		
-		public override bool Apply( AssetImporter importer, ImportDefinitionProfile fromProfile )
+		public override bool Apply( ImportContext context, ImportDefinitionProfile fromProfile )
 		{
-			if( CanProcess( importer ) == false )
+			if( CanProcess( context.Importer ) == false )
 				return false;
 			
 			if( m_ConstrainProperties.Count > 0 )
 			{
 				SerializedObject profileSerializedObject = new SerializedObject( ReferenceAssetImporter );
-				SerializedObject assetImporterSO = new SerializedObject( importer );
+				SerializedObject assetImporterSO = new SerializedObject( context.Importer );
 				CopyConstrainedProperties( assetImporterSO, profileSerializedObject );
 			}
 			else
 			{
-				EditorUtility.CopySerialized( ReferenceAssetImporter, importer );
+				EditorUtility.CopySerialized( ReferenceAssetImporter, context.Importer );
 			}
 
-			m_AssetsToForceApply.Remove( importer.assetPath );
+			m_AssetsToForceApply.Remove( context.AssetPath );
 			return true;
 		}
 		
