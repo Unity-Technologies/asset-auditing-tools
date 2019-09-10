@@ -358,5 +358,12 @@ namespace AssetTools
 			m_Inspector.Draw( SelfSerializedObject, layout );
 			SelfSerializedObject.ApplyModifiedProperties();
 		}
+		
+		public override int GetHashCode()
+		{
+			return (m_ConstrainProperties.GetHashCode() * 31) +
+			       ((m_ImporterReference != null ? m_ImporterReference.GetHashCode() : 0) * 31) +
+			       (kImportTaskName.GetHashCode() * 31);
+		}
 	}
 }

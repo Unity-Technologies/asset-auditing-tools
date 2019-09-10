@@ -62,9 +62,8 @@ namespace AssetTools
 				if( data[i].ConformObjects.Count == 0 )
 					continue;
 				
-				// TODO some unique way incase we have multiple modules of the same type
-				string moduleName = data[i].ImportTask.GetType().Name;
-				ConformObjectTreeViewItem conformObjectModuleRoot = new ConformObjectTreeViewItem( moduleName.GetHashCode(), 1, moduleName, true );
+				int moduleHash = data[i].ImportTask.GetHashCode() + i;
+				ConformObjectTreeViewItem conformObjectModuleRoot = new ConformObjectTreeViewItem( moduleHash, 1, data[i].ImportTask.GetType().Name, true );
 				if( conformObjectModuleRoot.children == null )
 					conformObjectModuleRoot.children = new List<TreeViewItem>();
 				conformObjectAssetRoot.AddChild( conformObjectModuleRoot );
@@ -77,7 +76,7 @@ namespace AssetTools
 
 				foreach( var conformObject in data[i].ConformObjects )
 				{
-					conformObject.AddTreeViewItems( activePath, conformObjectModuleRoot, assetsTreeItem, 2 );
+					conformObject.AddTreeViewItems( moduleHash, conformObjectModuleRoot, assetsTreeItem, 2 );
 				}
 			}
 		}

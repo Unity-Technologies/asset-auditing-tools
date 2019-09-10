@@ -23,9 +23,9 @@ namespace AssetTools
 			m_Conforms = propertyConforms;
 		}
 		
-		internal ConformObjectTreeViewItem( string activePath, int depth, IConformObject conformObject )
+		internal ConformObjectTreeViewItem( int id, int depth, IConformObject conformObject )
 		{
-			base.id = activePath.GetHashCode();
+			base.id = id;
 			base.depth = depth;
 			this.conformObject = conformObject;
 			base.displayName = conformObject.Name;
