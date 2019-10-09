@@ -13,14 +13,11 @@ namespace AssetTools
 		/// TODO If any of this is changed, do the Assets imported by it need to be reimported?
 		/// </summary>
 		
-		private const string kImportTaskName = "PreprocessorImportTask";
-		
 		[SerializeField] private string m_MethodString = "";
 		[SerializeField] private string m_Data = "";
 
 		private PreprocessorImportTaskInspector m_Inspector = null;
 		internal ProcessorMethodInfo m_ProcessorMethodInfo;
-		private ProcessingType _taskProcessType;
 
 		public string methodString
 		{
@@ -35,6 +32,16 @@ namespace AssetTools
 		public override ProcessingType TaskProcessType
 		{
 			get { return ProcessingType.Pre; }
+		}
+		
+		public override string ImportTaskName
+		{
+			get { return "PreprocessorImportTask"; }
+		}
+		
+		public override int Version
+		{
+			get { return Method == null ? 0 : Method.Version; }
 		}
 
 		public override string AssetMenuFixString
@@ -68,20 +75,20 @@ namespace AssetTools
 			}
 
 			UserDataSerialization userData = UserDataSerialization.Get( asset );
-			List<UserDataSerialization.PostprocessorData> data = userData.GetPostprocessorData();
+			List<UserDataSerialization.PostprocessorData> data = userData.GetProcessedMethodsData();
 			string profileGuid = AssetDatabase.AssetPathToGUID( AssetDatabase.GetAssetPath( profile ) );
 
 			if( data != null )
 			{
 				for( int i = 0; i < data.Count; ++i )
 				{
-					if( data[i].moduleName != kImportTaskName ||
+					if( data[i].moduleName != ImportTaskName ||
 					    data[i].typeName != Method.TypeName ||
 					    data[i].assemblyName != Method.AssemblyName ||
 					    data[i].importDefinitionGUID != profileGuid )
 						continue;
 
-					PreprocessorConformObject conformObject = new PreprocessorConformObject( data[i].typeName, data[i].version, Method.Version );
+					PreprocessorConformObject conformObject = new PreprocessorConformObject( Method.TypeName, Method.Version, data[i].version );
 					infos.Add( conformObject );
 					break;
 				}
@@ -93,14 +100,14 @@ namespace AssetTools
 			}
 			return infos;
 		}
-		
-		private void SetUserData( AssetImporter importer, ImportDefinitionProfile profile )
+
+		public override void PreprocessTask( ImportContext context, ImportDefinitionProfile profile )
 		{
-			UserDataSerialization data = UserDataSerialization.Get( importer.assetPath );
+			UserDataSerialization data = UserDataSerialization.Get( context.AssetPath );
 			string profileGuid = AssetDatabase.AssetPathToGUID( AssetDatabase.GetAssetPath( profile ) );
-			data.UpdateProcessing( new UserDataSerialization.PostprocessorData( profileGuid, kImportTaskName, Method.AssemblyName, Method.TypeName, Method.Version ) );
+			data.UpdateProcessing( new UserDataSerialization.PostprocessorData( profileGuid, ImportTaskName, Method.AssemblyName, Method.TypeName, Method.Version ) );
 		}
-		
+
 		public override bool Apply( ImportContext context, ImportDefinitionProfile fromProfile )
 		{
 			if( string.IsNullOrEmpty( m_MethodString ) == false )
@@ -109,10 +116,7 @@ namespace AssetTools
 				{
 					object returnValue = Method.Invoke( context, m_Data );
 					if( returnValue != null )
-					{
-						SetUserData( context.Importer, fromProfile );
 						return (bool) returnValue;
-					}
 				}
 			}
 			return false;

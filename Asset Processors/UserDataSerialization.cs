@@ -5,11 +5,13 @@ using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Serialization;
 
 namespace AssetTools
 {
 	public class UserDataSerialization
 	{
+		// TODO this clears every domain reload. See if we can improve this
 		private static List<UserDataSerialization> m_Cache = new List<UserDataSerialization>();
 		
 		
@@ -53,48 +55,101 @@ namespace AssetTools
 			}
 		}
 		
+		[Serializable]
+		public struct ImportTaskData
+		{
+			/// <summary>
+			/// The guid of the Import Definition File that processed this asset
+			/// </summary>
+			public string importDefinitionGUID;
+			
+			/// <summary>
+			/// The importTask name of the importTask that processed this asset
+			/// </summary>
+			public string taskName;
+
+			/// <summary>
+			/// The version number of the task
+			/// </summary>
+			public int version;
+
+			public ImportTaskData( string importDefinitionGUID, string taskName, int version )
+			{
+				this.importDefinitionGUID = importDefinitionGUID;
+				this.taskName = taskName;
+				this.version = version;
+			}
+		}
+		
 		/// <summary>
 		/// A list of serialised data for the Processing done on the asset
 		/// </summary>
 		[Serializable]
 		public struct PostprocessorDataList
 		{
-			public List<PostprocessorData> assetProcessedWith;
+			[FormerlySerializedAs( "assetProcessedWith" )]
+			public List<PostprocessorData> assetProcessedWithMethods;
+			
+			public List<ImportTaskData> assetProcessedWithTasks;
 
 			public void UpdateOrAdd( PostprocessorData d )
 			{
-				if( assetProcessedWith == null )
-					assetProcessedWith = new List<PostprocessorData>();
-				for( int i = 0; i < assetProcessedWith.Count; ++i )
+				if( assetProcessedWithMethods == null )
+					assetProcessedWithMethods = new List<PostprocessorData>();
+				for( int i = 0; i < assetProcessedWithMethods.Count; ++i )
 				{
-					if( assetProcessedWith[i].importDefinitionGUID == d.importDefinitionGUID &&
-					    assetProcessedWith[i].moduleName == d.moduleName )
+					if( assetProcessedWithMethods[i].importDefinitionGUID == d.importDefinitionGUID &&
+					    assetProcessedWithMethods[i].moduleName == d.moduleName )
 					{
-						PostprocessorData p = assetProcessedWith[i];
+						PostprocessorData p = assetProcessedWithMethods[i];
 						p.assemblyName = d.assemblyName;
 						p.typeName = d.typeName;
 						p.version = d.version;
-						assetProcessedWith[i] = p;
+						assetProcessedWithMethods[i] = p;
 						return;
 					}
 				}
-				assetProcessedWith.Add( d );
+				assetProcessedWithMethods.Add( d );
+			}
+			
+			public void UpdateOrAdd( ImportTaskData d )
+			{
+				if( assetProcessedWithTasks == null )
+					assetProcessedWithTasks = new List<ImportTaskData>();
+				for( int i = 0; i < assetProcessedWithTasks.Count; ++i )
+				{
+					if( assetProcessedWithTasks[i].importDefinitionGUID == d.importDefinitionGUID &&
+					    assetProcessedWithTasks[i].taskName == d.taskName )
+					{
+						ImportTaskData p = assetProcessedWithTasks[i];
+						p.version = d.version;
+						assetProcessedWithTasks[i] = p;
+						return;
+					}
+				}
+				assetProcessedWithTasks.Add( d );
 			}
 		}
 		
 		
-		
-		
 		private PostprocessorDataList m_ImporterPostprocessorData;
 		private AssetImporter m_Importer;
-		
-		private int m_UserDataStartIndex;
-		private int m_UserDataEndIndex;
+		private string m_ImporterJson;
 
-		public List<PostprocessorData> GetPostprocessorData()
+		//private int m_UserDataStartIndex;
+		//private int m_UserDataEndIndex;
+
+
+		public List<PostprocessorData> GetProcessedMethodsData()
 		{
 			// TODO make a copy?
-			return m_ImporterPostprocessorData.assetProcessedWith;
+			return m_ImporterPostprocessorData.assetProcessedWithMethods;
+		}
+		
+		public List<ImportTaskData> GetProcessedTasksData()
+		{
+			// TODO make a copy?
+			return m_ImporterPostprocessorData.assetProcessedWithTasks;
 		}
 
 		public UserDataSerialization( string assetPath )
@@ -135,22 +190,27 @@ namespace AssetTools
 				m_Cache.Add(ud);
 				return m_Cache[m_Cache.Count - 1];
 			}
-			else
-			{
-				return null;
-			}
+			
+			return null;
 		}
 		
 		private void ParseMetaFile()
 		{
+			GetImporterJson();
+			PostprocessorDataList importersPostprocessorData = new PostprocessorDataList();
+			if( ! string.IsNullOrEmpty( m_ImporterJson ))
+				importersPostprocessorData = JsonUtility.FromJson<PostprocessorDataList>( m_ImporterJson );
+			m_ImporterPostprocessorData = importersPostprocessorData;
+		}
+
+		private void GetImporterJson()
+		{
 			Assert.IsNotNull( m_Importer );
-			
+
 			string userData = m_Importer.userData;
+			
 			int idfStartIndex = userData.IndexOf( searchString, StringComparison.Ordinal );
 			int idfEndIndex = -1;
-			
-			PostprocessorDataList importersPostprocessorData = new PostprocessorDataList();
-			
 			if( idfStartIndex != -1 )
 			{
 				idfEndIndex = idfStartIndex + searchString.Length;
@@ -169,49 +229,84 @@ namespace AssetTools
 				}
 				Assert.AreEqual( -1, counter );
 
-				string str = userData.Substring( startIndex, idfEndIndex - startIndex );
-				importersPostprocessorData = JsonUtility.FromJson<PostprocessorDataList>( str );
+				int length = idfEndIndex - startIndex;
+				m_ImporterJson = userData.Substring( startIndex, length );
+				if( m_ImporterJson.Length > 0 )
+				{
+					for( int i = m_ImporterJson.Length - 1; i >= 0; --i )
+					{
+						if( m_ImporterJson[i] == ' ' )
+							m_ImporterJson = m_ImporterJson.Remove( i );
+						else
+							break;
+					}
+				}
 			}
-			
-			m_ImporterPostprocessorData = importersPostprocessorData;
-			m_UserDataStartIndex = idfStartIndex;
-			m_UserDataEndIndex = idfEndIndex;
 		}
 
 		public void UpdateProcessing( PostprocessorData d )
 		{
 			m_ImporterPostprocessorData.UpdateOrAdd( d );
-			SaveMetaData();
 		}
 		
-		private void SaveMetaData()
+		public void UpdateProcessing( ImportTaskData d )
 		{
+			m_ImporterPostprocessorData.UpdateOrAdd( d );
+		}
+		
+		public void SaveMetaData()
+		{
+			//GetImporterJson(); // use this when testing
 			string json = JsonUtility.ToJson( m_ImporterPostprocessorData );
+			if( string.Equals( json, m_ImporterJson ) )
+				return;
+			
 			string importDefinitionFileUserData = "\"ImportDefinitionFiles\": { " + json + " }";
 
 			string userData = m_Importer.userData;
-			if( m_UserDataStartIndex >= 0 && m_UserDataEndIndex > m_UserDataStartIndex )
+			
+			int idfStartIndex = userData.IndexOf( searchString, StringComparison.Ordinal );
+			int idfEndIndex = -1;
+			if( idfStartIndex != -1 )
 			{
-				int length = m_UserDataEndIndex - m_UserDataStartIndex;
-				if( userData.Length < m_UserDataStartIndex + length )
+				idfEndIndex = idfStartIndex + searchString.Length;
+				int counter = 0;
+				int startIndex = idfEndIndex;
+				while( idfEndIndex < userData.Length )
+				{
+					if( userData[idfEndIndex] == '{' )
+						counter++;
+					else if( userData[idfEndIndex] == '}' )
+						counter--;
+
+					if( counter == -1 )
+						break;
+					++idfEndIndex;
+				}
+				Assert.AreEqual( -1, counter );
+			}
+			
+			if( idfStartIndex >= 0 && idfEndIndex > idfStartIndex )
+			{
+				int length = idfEndIndex - idfStartIndex;
+				if( userData.Length < idfStartIndex + length )
 				{
 					Debug.LogError( "Problem setting user data" );
 				}
-				if( importDefinitionFileUserData == userData.Substring( m_UserDataStartIndex, length ) )
-					return;
 				
-				userData = userData.Remove( m_UserDataStartIndex, m_UserDataEndIndex - m_UserDataStartIndex );
+				if( importDefinitionFileUserData == userData.Substring( idfStartIndex, length ) )
+				{
+					Debug.LogError( "Bad checks" );
+					return; //
+				}
+				
+				userData = userData.Remove( idfStartIndex, (idfEndIndex - idfStartIndex)+1 );
 			}
 			else
-				m_UserDataStartIndex = 0;
-			
-			m_Importer.userData = userData.Insert( m_UserDataStartIndex, importDefinitionFileUserData );
-			m_UserDataEndIndex = importDefinitionFileUserData.Length + m_UserDataStartIndex;
-			EditorUtility.SetDirty( m_Importer );
-			AssetDatabase.WriteImportSettingsIfDirty( m_Importer.assetPath );
-			
-			// TODO need to update the anchor points in a more optimised way
-			ParseMetaFile();
+				idfStartIndex = 0;
+
+			m_ImporterJson = json;
+			m_Importer.userData = userData.Insert( idfStartIndex, importDefinitionFileUserData );
 		}
 	}
 

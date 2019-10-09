@@ -24,12 +24,7 @@ namespace AssetTools
 	public class ImporterPropertiesImportTask : BaseImportTask
 	{
 		public UnityEngine.Object m_ImporterReference = null;
-		
-#if UNITY_2018_1_OR_NEWER
-		// TODO on 2018 allow for the use of a Preset instead of an Object reference
-		public Preset m_Preset;
-#endif
-		
+
 		public List<string> m_ConstrainProperties = new List<string>();
 
 		[NonSerialized] public List<string> m_ConstrainPropertiesDisplayNames = new List<string>();
@@ -49,7 +44,12 @@ namespace AssetTools
 		{
 			get { return ProcessingType.Pre; }
 		}
-		
+
+		public override void PreprocessTask( ImportContext context, ImportDefinitionProfile profile )
+		{
+			// this task doesn't need to set the metaData
+		}
+
 		public override string AssetMenuFixString
 		{
 			get { return "Conform to Importer Template Properties"; }
@@ -105,7 +105,12 @@ namespace AssetTools
 			
 			return item.GetType() == ReferenceAssetImporter.GetType();
 		}
-		
+
+		public override int Version
+		{
+			get { return 0; }
+		}
+
 		public override bool GetSearchFilter( out string searchFilter, List<string> ignoreAssetPaths )
 		{
 			searchFilter = null;
@@ -338,8 +343,7 @@ namespace AssetTools
 			{
 				EditorUtility.CopySerialized( ReferenceAssetImporter, context.Importer );
 			}
-
-			m_AssetsToForceApply.Remove( context.AssetPath );
+			
 			return true;
 		}
 		

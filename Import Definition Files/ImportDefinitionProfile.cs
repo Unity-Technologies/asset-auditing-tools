@@ -71,21 +71,46 @@ namespace AssetTools
 					return;
 			}
 
+			bool saveMeta = false;
+
 			if( m_RunOnImport )
 			{
 				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
-					if( m_ImportTasks[i] != null && m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Pre )
-						m_ImportTasks[i].Apply( context, this );
+					if( m_ImportTasks[i] != null  )
+					{
+						m_ImportTasks[i].PreprocessTask( context, this );
+						saveMeta = true;
+						if( m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Pre )
+						{
+							m_ImportTasks[i].Apply( context, this );
+							m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+						}
+					}
 				}
 			}
 			else
 			{
 				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
-					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( context.Importer ) && m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Pre )
-						m_ImportTasks[i].Apply( context, this );
+					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( context.Importer ) )
+					{
+						m_ImportTasks[i].PreprocessTask( context, this );
+						saveMeta = true;
+						if( m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Pre )
+						{
+							m_ImportTasks[i].Apply( context, this );
+							m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+						}
+					}
 				}
+			}
+			
+			if( saveMeta )
+			{
+				UserDataSerialization data = UserDataSerialization.Get( context.AssetPath );
+				if( data != null )
+					data.SaveMetaData();
 			}
 		}
 		
@@ -109,7 +134,10 @@ namespace AssetTools
 				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
 					if( m_ImportTasks[i] != null && m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Post )
+					{
 						m_ImportTasks[i].Apply( context, this );
+						m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+					}
 				}
 			}
 			else
@@ -117,7 +145,10 @@ namespace AssetTools
 				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
 					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( context.Importer ) && m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Post )
+					{
 						m_ImportTasks[i].Apply( context, this );
+						m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+					}
 				}
 			}
 		}
