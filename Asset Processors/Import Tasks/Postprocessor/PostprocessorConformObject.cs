@@ -68,9 +68,9 @@ namespace AssetTools
 			return false;
 		}
 		
-		public void AddTreeViewItems( string parentPath, ConformObjectTreeViewItem parent, AssetsTreeViewItem assetsTreeItem, int depth, int arrayIndex = -1 )
+		public void AddTreeViewItems( int parentId, ConformObjectTreeViewItem parent, AssetsTreeViewItem assetsTreeItem, int depth, int arrayIndex = -1 )
 		{
-			string activePath = parentPath + Name;
+			int activePath = parentId + (Name.GetHashCode()*31);
 			ConformObjectTreeViewItem conformObjectTree = new ConformObjectTreeViewItem( activePath, depth, this )
 			{
 				AssetsTreeViewItem = assetsTreeItem

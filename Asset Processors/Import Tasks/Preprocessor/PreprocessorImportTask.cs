@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AssetTools.GUIUtility;
 using UnityEditor;
@@ -181,7 +181,7 @@ namespace AssetTools
 		
 		public override int GetHashCode()
 		{
-			return (m_MethodString.GetHashCode() * 31) + (m_Data.GetHashCode() * 31) + (kImportTaskName.GetHashCode() * 31);
+			return (m_MethodString.GetHashCode() * 31) + (m_Data.GetHashCode() * 31) + (ImportTaskName.GetHashCode() * 31);
 		}
 	}
 }

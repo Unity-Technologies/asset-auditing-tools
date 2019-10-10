@@ -372,7 +372,7 @@ namespace AssetTools
 		{
 			return (m_ConstrainProperties.GetHashCode() * 31) +
 			       ((m_ImporterReference != null ? m_ImporterReference.GetHashCode() : 0) * 31) +
-			       (kImportTaskName.GetHashCode() * 31);
+			       (ImportTaskName.GetHashCode() * 31);
 		}
 	}
 }
