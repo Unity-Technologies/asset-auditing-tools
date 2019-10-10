@@ -7,18 +7,18 @@ using UnityEngine;
 namespace AssetTools
 {
 	[Serializable]
-	public class PreprocessorImportTask : BaseImportTask
+	public class PostprocessorImportTask : BaseImportTask
 	{
 		/// <summary>
 		/// TODO If any of this is changed, do the Assets imported by it need to be reimported?
 		/// </summary>
-		
+
 		[SerializeField] private string m_MethodString = "";
 		[SerializeField] private string m_Data = "";
 
-		private PreprocessorImportTaskInspector m_Inspector = null;
+		private PostprocessorImportTaskInspector m_Inspector = null;
 		internal ProcessorMethodInfo m_ProcessorMethodInfo;
-
+		
 		public string methodString
 		{
 			get { return m_MethodString; }
@@ -26,19 +26,20 @@ namespace AssetTools
 		
 		public override Type GetConformObjectType()
 		{
-			return typeof(PreprocessorConformObject);
+			return typeof(PostprocessorConformObject);
 		}
-
+		
 		public override ProcessingType TaskProcessType
 		{
-			get { return ProcessingType.Pre; }
+			get { return ProcessingType.Post; }
 		}
 		
 		public override string ImportTaskName
 		{
-			get { return "PreprocessorImportTask"; }
+			get { return "PostprocessorImportTask"; }
 		}
 		
+
 		public override int Version
 		{
 			get { return Method == null ? 0 : Method.Version; }
@@ -59,17 +60,17 @@ namespace AssetTools
 
 		public override List<IConformObject> GetConformObjects( string asset, ImportDefinitionProfile profile )
 		{
-			// Preprocessor versionCode comparison
+			// postcessor versionCode comparison
 			// will need someway to store this. It could not work well if imported not using it
 			// 1: add it to meta data. Only option is userData, which could conflict with other code packages. This would make it included in the hash for cache server. Which would be required.
-			// 2: store a database of imported version data. Could be tricky to keep in sync
+			// 2: store a databaseof imported version data. Could be tricky to keep in sync
 			// 3: AssetDatabaseV2 supports asset dependencies
 			
 			List<IConformObject> infos = new List<IConformObject>();
 
 			if( Method == null )
 			{
-				PreprocessorConformObject conformObject = new PreprocessorConformObject( "None Selected", 0 );
+				PostprocessorConformObject conformObject = new PostprocessorConformObject( "None Selected", 0 );
 				infos.Add( conformObject );
 				return infos;
 			}
@@ -88,16 +89,14 @@ namespace AssetTools
 					    data[i].importDefinitionGUID != profileGuid )
 						continue;
 
-					PreprocessorConformObject conformObject = new PreprocessorConformObject( Method.TypeName, Method.Version, data[i].version );
-					infos.Add( conformObject );
+					infos.Add( new PostprocessorConformObject( Method.TypeName, Method.Version, data[i].version ) );
 					break;
 				}
 			}
-			else
-			{
-				PreprocessorConformObject conformObject = new PreprocessorConformObject( Method.TypeName, Method.Version );
-				infos.Add( conformObject );
-			}
+			
+			if( infos.Count == 0 )
+				infos.Add( new PostprocessorConformObject( Method.TypeName, Method.Version ) );
+			
 			return infos;
 		}
 
@@ -137,7 +136,7 @@ namespace AssetTools
 						return null;
 					}
 					
-					List<ProcessorMethodInfo> methods = PreprocessorImplementorCache.Methods;
+					List<ProcessorMethodInfo> methods = PostprocessorImplementorCache.Methods;
 					for( int i = 0; i < methods.Count; ++i )
 					{
 						if( assemblyName != null && methods[i].AssemblyName.StartsWith( assemblyName ) == false )
@@ -145,6 +144,7 @@ namespace AssetTools
 
 						if( methods[i].TypeName.EndsWith( typeString ) )
 						{
+							// make sure its correct?
 							m_ProcessorMethodInfo = methods[i];
 							break;
 						}
@@ -173,15 +173,10 @@ namespace AssetTools
 		public override void DrawGUI( ControlRect layout )
 		{
 			if( m_Inspector == null )
-				m_Inspector = new PreprocessorImportTaskInspector();
+				m_Inspector = new PostprocessorImportTaskInspector();
 			
 			m_Inspector.Draw( SelfSerializedObject, layout );
 			SelfSerializedObject.ApplyModifiedProperties();
-		}
-		
-		public override int GetHashCode()
-		{
-			return (m_MethodString.GetHashCode() * 31) + (m_Data.GetHashCode() * 31) + (kImportTaskName.GetHashCode() * 31);
 		}
 	}
 }

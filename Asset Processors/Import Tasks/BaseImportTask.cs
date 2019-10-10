@@ -12,6 +12,8 @@ namespace AssetTools
 	[System.Serializable]
 	public abstract class BaseImportTask : ScriptableObject, IImportTask
 	{
+		public enum ProcessingType { Pre, Post }
+		
 		protected List<string> m_AssetsToForceApply = new List<string>();
 		protected string m_SearchFilter = "";
 		
@@ -26,8 +28,20 @@ namespace AssetTools
 				return m_SelfSerializedObject;
 			}
 		}
+
+		public virtual int Version
+		{
+			get { return 0; }
+		}
+
+		public virtual string ImportTaskName
+		{
+			get { return this.GetType().Name; }
+		}
 		
 		public abstract string AssetMenuFixString { get; }
+
+		public abstract ProcessingType TaskProcessType { get; }
 
 		public abstract bool CanProcess( AssetImporter item );
 
@@ -50,7 +64,20 @@ namespace AssetTools
 				}
 			}
 		}
+
+		public void SetManuallyProcessing( string assetPath, bool value )
+		{
+			if( value && m_AssetsToForceApply.Contains( assetPath ) == false )
+			{
+				m_AssetsToForceApply.Add( assetPath );
+			}
+			else if( !value )
+			{
+				m_AssetsToForceApply.Remove( assetPath );
+			}
+		}
 		
+
 		public virtual void DrawGUI( ControlRect layout )
 		{
 			var type = GetType();
@@ -75,12 +102,17 @@ namespace AssetTools
 			searchFilter = m_SearchFilter;
 			return true;
 		}
-
-		public virtual bool Apply( AssetImporter importer, ImportDefinitionProfile fromProfile )
+		public virtual void PreprocessTask( ImportContext context, ImportDefinitionProfile profile )
 		{
-			if( CanProcess( importer ) == false )
+			UserDataSerialization data = UserDataSerialization.Get( context.AssetPath );
+			string profileGuid = AssetDatabase.AssetPathToGUID( AssetDatabase.GetAssetPath( profile ) );
+			data.UpdateProcessing( new UserDataSerialization.ImportTaskData( profileGuid, ImportTaskName, Version ) );
+		}
+
+		public virtual bool Apply( ImportContext context, ImportDefinitionProfile fromProfile )
+		{
+			if( CanProcess( context.Importer ) == false )
 				return false;
-			m_AssetsToForceApply.Remove( importer.assetPath );
 			return true;
 		}
 	}

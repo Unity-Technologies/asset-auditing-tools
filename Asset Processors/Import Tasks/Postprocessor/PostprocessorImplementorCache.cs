@@ -7,62 +7,8 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	
-	public class ProcessorMethodInfo
-	{
-		private readonly Type m_Type;
-		private readonly MethodInfo m_MethodInfo;
-		private MethodInfo m_VersionMethodInfo;
-		private object m_Instance;
-		
 
-		public ProcessorMethodInfo( Type type, MethodInfo info )
-		{
-			m_Type = type;
-			m_MethodInfo = info;
-			m_Instance = null;
-		}
-		
-		public string TypeName
-		{
-			get { return m_Type.FullName; }
-		}
-
-		public string AssemblyName
-		{
-			get { return m_Type.Assembly.FullName; }
-		}
-
-		public int Version
-		{
-			get
-			{
-				if( m_VersionMethodInfo == null )
-				{
-					m_VersionMethodInfo = m_Type.GetMethod( "GetVersion" );
-					if( m_VersionMethodInfo == null )
-					{
-						Debug.LogError( m_Type.FullName + " does not implement GetVersion" );
-						return 0;
-					}
-				}
-				object o = m_VersionMethodInfo.Invoke( Instance, null );
-				return (int) o;
-			}
-		}
-
-		private object Instance
-		{
-			get { return m_Instance ?? (m_Instance = Activator.CreateInstance( m_Type )); }
-		}
-
-		public object Invoke( ImportContext context, string data )
-		{
-			return Instance == null ? null : m_MethodInfo.Invoke( m_Instance, new object[] {context, data} );
-		}
-	}
-
-	public class PreprocessorImplementorCache : AssetPostprocessor
+	public class PostprocessorImplementorCache : AssetPostprocessor
 	{
 		private static List<ProcessorMethodInfo> m_Methods;
 
@@ -80,12 +26,12 @@ namespace AssetTools
 		}
 
 		/// <summary>
-		/// Brute force get all the methods that implement IPreprocessor
+		/// Brute force get all the methods that implement IPostprocessor
 		/// May not want this as it limits the ability to move over to MonoScript dependency in AssetDatabaseV2
 		/// </summary>
 		private static void FindMethods()
 		{
-			Type p = typeof(IPreprocessor);
+			Type p = typeof(IPostprocessor);
 			
 			m_Methods.Clear();
 			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -98,13 +44,13 @@ namespace AssetTools
 					if( !types[t].IsClass || types[t].IsInterface || !p.IsAssignableFrom( types[t] ) )
 						continue;
 					
-					MethodInfo m = types[t].GetMethod( "OnPreprocessAsset" );
+					MethodInfo m = types[t].GetMethod( "OnPostprocessAsset" );
 					if( m != null )
 					{
 						m_Methods.Add( new ProcessorMethodInfo( types[t], m ) );
 					}
 					else
-						Debug.LogError( "Could not find OnPreprocessAsset on "+ types[t].Name );
+						Debug.LogError( "Could not find OnPostprocessAsset on "+ types[t].Name );
 				}
 			}
 		}
@@ -112,7 +58,7 @@ namespace AssetTools
 		// // TODO MonoScripts will allow for AssetDatabaseV2 to have an Asset dependant on the MonoScript, so it is included in the asset hash without .userData
 		// private static void OnPostprocessAllAssets( string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths )
 		// {
-		// 	// TODO decide if want to keep track of anything that implement IPreprocessor and cache it
+		// 	// TODO decide if want to keep track of anything that implement IPostprocessor and cache it
 		// 	for( int i = 0; i < movedFromAssetPaths.Length; ++i )
 		// 	{
 		// 	}
@@ -129,7 +75,7 @@ namespace AssetTools
 		// 		Type t = s.GetClass();
 		// 		if( t.IsInterface )
 		// 			continue;
-		// 		if( !typeof(IPreprocessor).IsAssignableFrom( t ) )
+		// 		if( !typeof(IPostprocessor).IsAssignableFrom( t ) )
 		// 			continue;
 		// 		
 		//

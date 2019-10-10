@@ -8,7 +8,7 @@ namespace AssetTools
 
 	public interface IPreprocessor
 	{
-		bool OnPreprocessAsset( AssetImporter importer, string data );
+		bool OnPreprocessAsset( ImportContext context, string data );
 		int GetVersion();
 	}
 

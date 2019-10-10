@@ -56,7 +56,7 @@ namespace AssetTools
 			return data;
 		}
 
-		public void ProcessAsset( AssetImporter asset, bool checkForConformity = true )
+		public void PreprocessAsset( ImportContext context, bool checkForConformity = true )
 		{
 			if( checkForConformity )
 			{
@@ -64,27 +64,91 @@ namespace AssetTools
 				{
 					List<Filter> filters = new List<Filter>(m_Filters);
 					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
-					if( Filter.Conforms( asset, filters ) == false )
+					if( Filter.Conforms( context.Importer, filters ) == false )
 						return;
 				}
-				else if( Filter.Conforms( asset, m_Filters ) == false )
+				else if( Filter.Conforms( context.Importer, m_Filters ) == false )
 					return;
 			}
+
+			bool saveMeta = false;
 
 			if( m_RunOnImport )
 			{
 				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
-					if( m_ImportTasks[i] != null )
-						m_ImportTasks[i].Apply( asset, this );
+					if( m_ImportTasks[i] != null  )
+					{
+						m_ImportTasks[i].PreprocessTask( context, this );
+						saveMeta = true;
+						if( m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Pre )
+						{
+							m_ImportTasks[i].Apply( context, this );
+							m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+						}
+					}
 				}
 			}
 			else
 			{
 				for( int i = 0; i < m_ImportTasks.Count; ++i )
 				{
-					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( asset ) )
-						m_ImportTasks[i].Apply( asset, this );
+					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( context.Importer ) )
+					{
+						m_ImportTasks[i].PreprocessTask( context, this );
+						saveMeta = true;
+						if( m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Pre )
+						{
+							m_ImportTasks[i].Apply( context, this );
+							m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+						}
+					}
+				}
+			}
+			
+			if( saveMeta )
+			{
+				UserDataSerialization data = UserDataSerialization.Get( context.AssetPath );
+				if( data != null )
+					data.SaveMetaData();
+			}
+		}
+		
+		public void PostprocessAsset( ImportContext context, bool checkForConformity = true )
+		{
+			if( checkForConformity )
+			{
+				if( m_FilterToFolder )
+				{
+					List<Filter> filters = new List<Filter>(m_Filters);
+					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
+					if( Filter.Conforms( context.Importer, filters ) == false )
+						return;
+				}
+				else if( Filter.Conforms( context.Importer, m_Filters ) == false )
+					return;
+			}
+			
+			if( m_RunOnImport )
+			{
+				for( int i = 0; i < m_ImportTasks.Count; ++i )
+				{
+					if( m_ImportTasks[i] != null && m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Post )
+					{
+						m_ImportTasks[i].Apply( context, this );
+						m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+					}
+				}
+			}
+			else
+			{
+				for( int i = 0; i < m_ImportTasks.Count; ++i )
+				{
+					if( m_ImportTasks[i] != null && m_ImportTasks[i].IsManuallyProcessing( context.Importer ) && m_ImportTasks[i].TaskProcessType == BaseImportTask.ProcessingType.Post )
+					{
+						m_ImportTasks[i].Apply( context, this );
+						m_ImportTasks[i].SetManuallyProcessing( context.AssetPath, false );
+					}
 				}
 			}
 		}
