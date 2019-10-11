@@ -151,7 +151,18 @@ namespace AssetTools
 			HandleResize();
 			DoProfileView();
 
-			m_AssetList.searchString = SearchField.OnGUI( searchBarRect, m_AssetList.searchString );
+			string search = SearchField.OnGUI( searchBarRect, m_AssetList.CustomSearch);
+			if( search != m_AssetList.CustomSearch )
+			{
+				m_AssetList.CustomSearch = search;
+				if( String.IsNullOrEmpty( m_AssetList.CustomSearch ) )
+				{
+					// search has cleared but we want to keep the selection in view
+					m_AssetList.ExpandForSelection();
+				}
+				m_AssetList.Reload();
+			}
+			
 			float listY = k_toolBarY + k_toolBarHeight + 3;
 			m_AssetList.OnGUI( new Rect( 0, listY, position.width, (int)(position.height * m_SplitterPercent) - listY ) );
 			
