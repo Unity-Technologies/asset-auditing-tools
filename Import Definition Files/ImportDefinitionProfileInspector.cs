@@ -41,6 +41,11 @@ namespace AssetTools
 		{
 			if( m_Profile == null )
 				m_Profile = (ImportDefinitionProfile) target;
+				
+			//while asset is being created, path can't be determined, which throws an exception when setting up the filters
+			if(string.IsNullOrEmpty(AssetDatabase.GetAssetPath(m_Profile)))
+				return;
+				
 #if UNITY_2019_1_OR_NEWER
 			Rect viewRect = new Rect( 18, 0, EditorGUIUtility.currentViewWidth-23, EditorGUIUtility.singleLineHeight );
 #else
