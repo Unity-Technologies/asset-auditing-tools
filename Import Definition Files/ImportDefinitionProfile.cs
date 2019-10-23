@@ -36,6 +36,10 @@ namespace AssetTools
 
 		public List<Filter> GetFilters( bool userFiltersOnly = false )
 		{
+			//get filters is called before m_filters is initialized when import definition is created
+			if (m_Filters == null)
+				return null;
+		
 			List<Filter> filters = new List<Filter>(m_Filters);
 			if( m_FilterToFolder )
 				filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
