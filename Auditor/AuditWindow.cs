@@ -11,6 +11,9 @@ namespace AssetTools
 		private TreeViewState m_AssetListState;
 		private AssetsTreeView m_AssetList;
 
+		private bool m_Hierarchical;
+		private SearchField m_SearchFieldInternal;
+
 		private TreeViewState m_PropertyListState;
 		private ModularDetailTreeView m_ModularTreeView;
 		
@@ -24,9 +27,45 @@ namespace AssetTools
 		private float m_SplitterPercent = 0.8f;
 		private bool m_ResizingSplitter;
 
-		private GUIStyle italicStyle;
-		private GUIStyle boldStyle;
-		[NonSerialized] private Texture2D m_RefreshTexture;
+		private const float horizontalBuffer = 5f;
+		private const float k_toolBarY = 0;
+		private const float k_toolBarHeight = 17f;
+		
+		private float ContentX
+		{
+			get { return horizontalBuffer; }
+		}
+		private float ContentWidth
+		{
+			get { return position.width - ContentX - horizontalBuffer; }
+		}
+
+		private Rect ProfileDropDownRect
+		{
+			get { return new Rect( ContentX, k_toolBarY, 150, k_toolBarHeight ); }
+		}
+		private Rect ProfileSelectRect
+		{
+			get { return new Rect( ContentX+ProfileDropDownRect.width+3, k_toolBarY, 60, k_toolBarHeight ); }
+		}
+		private Rect RefreshRect
+		{
+			get { return new Rect( (ContentX+ContentWidth) - 50, k_toolBarY, 50, k_toolBarHeight ); }
+		}
+		private Rect SearchBarRect
+		{
+			get
+			{
+				float x = ProfileSelectRect.x + ProfileSelectRect.width + 3+5;
+				return new Rect( x, k_toolBarY+1, (RefreshRect.x-3-5)-x, k_toolBarHeight-1 );
+			}
+		}
+
+		private void OnEnable()
+		{
+			m_Hierarchical = EditorPrefs.GetBool( "AuditWindow.AssetsTreeView.IsHierarchicalSearch", true );
+			m_SearchFieldInternal = new SearchField();
+		}
 
 		[MenuItem( "Window/Asset Auditor", priority = 2055)]
 		public static AuditWindow GetWindow()
@@ -37,57 +76,21 @@ namespace AssetTools
 			return window;
 		}
 
-		private const float horizontalBuffer = 5f;
-		
-		private float contentX
-		{
-			get { return horizontalBuffer; }
-		}
-		private float contentWidth
-		{
-			get { return position.width - contentX - horizontalBuffer; }
-		}
-
-
-		private const float k_toolBarY = 3;
-		private const float k_toolBarHeight = 17f;
-		Rect profileDropDownRect
-		{
-			get { return new Rect( contentX, k_toolBarY, 150, k_toolBarHeight ); }
-		}
-		Rect profileSelectRect
-		{
-			get { return new Rect( contentX+profileDropDownRect.width+3, k_toolBarY, 60, k_toolBarHeight ); }
-		}
-		Rect refreshRect
-		{
-			get { return new Rect( (contentX+contentWidth) - 50, k_toolBarY, 50, k_toolBarHeight ); }
-		}
-		private Rect searchBarRect
-		{
-			get
-			{
-				float x = profileSelectRect.x + profileSelectRect.width + 3;
-				return new Rect( x, k_toolBarY, (refreshRect.x-3)-x, k_toolBarHeight );
-			}
-		}
-
 		private void RefreshData()
 		{
 			profiles = new List<ImportDefinitionProfile>();
 			profileNames = new List<string>();
 			GetAuditorProfiles( );
-			
+
 			if( m_AssetListState == null )
 				m_AssetListState = new TreeViewState();
 
 			IList<int> selection = null;
 			if( m_AssetList != null )
-			{
 				selection = m_AssetList.GetSelection();
-			}
 			
 			m_AssetList = new AssetsTreeView( m_AssetListState );
+			
 			if( profiles.Count > 0 && selected < profiles.Count )
 				m_AssetList.m_Profile = profiles[selected];
 			m_AssetList.Reload();
@@ -100,12 +103,10 @@ namespace AssetTools
 			m_ModularTreeView.Reload();
 
 			if( selection != null )
-			{
 				m_AssetList.SetupSelection( selection );
-			}
 		}
 		
-		void GetAuditorProfiles(  )
+		void GetAuditorProfiles()
 		{
 			string[] auditorProfileGUIDs = AssetDatabase.FindAssets( "t:ImportDefinitionProfile" );
 
@@ -120,111 +121,110 @@ namespace AssetTools
 
 			profileNames.Clear();
 			foreach( ImportDefinitionProfile assetRule in profiles )
-			{
 				profileNames.Add( assetRule.name );
-			}
 		}
 
 		void OnGUI()
 		{
-			// hacky way to see if its setup
-			if( m_RefreshTexture == null )// || m_FixAction == null )
-			{
-				m_RefreshTexture = EditorGUIUtility.FindTexture( "Refresh" );
-				italicStyle = new GUIStyle( GUI.skin.label );
-				boldStyle = new GUIStyle( GUI.skin.label );
-				italicStyle.fontStyle = FontStyle.BoldAndItalic;
-				boldStyle.fontStyle = FontStyle.Bold;
-				//m_FixAction = FixCallback;
-			}
+			HandleResize();
 
 			if( m_AssetList == null || m_ModularTreeView == null )
-			{
 				RefreshData();
-			}
-
-			if( GUI.Button( refreshRect, m_RefreshTexture ) )
-			{
-				RefreshData();
-			}
 			
-			HandleResize();
-			DoProfileView();
-
-			string search = SearchField.OnGUI( searchBarRect, m_AssetList.CustomSearch);
-			if( search != m_AssetList.CustomSearch )
-			{
-				m_AssetList.CustomSearch = search;
-				if( String.IsNullOrEmpty( m_AssetList.CustomSearch ) )
-				{
-					// search has cleared but we want to keep the selection in view
-					m_AssetList.ExpandForSelection();
-				}
-				m_AssetList.Reload();
-			}
+			ToolbarGUI( new Rect( 0, 0, position.width, k_toolBarHeight) );
 			
-			float listY = k_toolBarY + k_toolBarHeight + 3;
-			m_AssetList.OnGUI( new Rect( 0, listY, position.width, (int)(position.height * m_SplitterPercent) - listY ) );
+			float viewY = k_toolBarY + k_toolBarHeight;
+			m_AssetList.OnGUI( new Rect( 0, viewY, position.width, (int)(position.height * m_SplitterPercent) - viewY ) );
 			
-			listY = (int)(position.height * m_SplitterPercent) + 3;
-			float h = position.height - listY;
-			m_ModularTreeView.OnGUI( new Rect( 0, listY, position.width, h ) );
+			viewY = (int)(position.height * m_SplitterPercent) + 3;
+			m_ModularTreeView.OnGUI( new Rect( 0, viewY, position.width, position.height - viewY ) );
 			
 			if( m_ResizingSplitter )
 				Repaint();
 		}
 
-		private void DoProfileView()
+		private void ToolbarGUI( Rect toolbarPos )
 		{
-			EditorGUI.BeginChangeCheck();
+			GUI.Box( toolbarPos, GUIContent.none, EditorStyles.toolbar );
+			
 			string[] popupList = new string[profileNames.Count + 3];
 			for( int i = 0; i < profileNames.Count; ++i )
-			{
 				popupList[i] = profileNames[i];
-			}
 
 			int preSelected = selected;
-			selected = EditorGUI.Popup( profileDropDownRect, selected, popupList );
+			selected = EditorGUI.Popup( ProfileDropDownRect, selected, popupList, EditorStyles.toolbarPopup );
+			if( selected != preSelected && selected < profileNames.Count )
+				RefreshData();
 			
-			if( EditorGUI.EndChangeCheck() )
-			{
-				if( selected == profileNames.Count )
-				{
-					Debug.Log( "Need to create a new profile" );
-					// change the GUI to input 
-				}
-				else if( selected == profileNames.Count+1 )
-				{
-					Debug.Log( "Need to rename profile" );
-					// rename popup
-				}
-				else if( selected == profileNames.Count+2 )
-				{
-					if( EditorUtility.DisplayDialog( "Delete Profile", "Are you sure you want to delete " + profileNames[preSelected], "Delete", "Cancel" ) )
-					{
-						if( AssetDatabase.DeleteAsset( AssetDatabase.GetAssetPath( profiles[preSelected] ) ) )
-						{
-							profiles.RemoveAt( preSelected );
-							profileNames.RemoveAt( preSelected );
-						}
-
-						if( selected > 0 )
-							selected = preSelected - 1;
-					}
-				}
-				else if( selected < profileNames.Count )
-				{
-					RefreshData();
-				}
-			}
-			
-			if( GUI.Button( profileSelectRect, "select" ) && selected >= 0 && selected < profiles.Count && profiles[selected] != null )
+			if( GUI.Button( ProfileSelectRect, "Select", Styles.button ) && selected >= 0 && selected < profiles.Count && profiles[selected] != null )
 			{
 				Selection.activeObject = profiles[selected];
 				EditorGUIUtility.PingObject( profiles[selected] );
 			}
+			
+			if( m_SearchFieldInternal == null )
+				m_SearchFieldInternal = new SearchField();
+			OnSearchGUI( SearchBarRect );
+			
+			if( GUI.Button( RefreshRect, "Refresh", Styles.button ) )
+				RefreshData();
 		}
 		
+		private void OnSearchGUI( Rect barPosition )
+		{
+			string text = m_Hierarchical ? m_AssetList.CustomSearch : m_AssetList.searchString;
+			
+			Rect popupPosition = new Rect(barPosition.x, barPosition.y, 20, barPosition.width);
+			if (Event.current.type == EventType.MouseDown && popupPosition.Contains(Event.current.mousePosition))
+			{
+				var menu = new GenericMenu();
+				menu.AddItem(new GUIContent("Hierarchical Search"), m_Hierarchical, () => SetSearchMode( true ));
+				menu.AddItem(new GUIContent("Flat Search"), !m_Hierarchical, () => SetSearchMode( false ));
+				menu.DropDown(popupPosition);
+			}
+			else
+			{
+				var searchString = m_SearchFieldInternal.OnGUI(barPosition, text, Styles.searchField, Styles.searchFieldCancelButton, Styles.searchFieldCancelButtonEmpty);
+				
+				if (text != searchString)
+				{
+					text = searchString;
+					
+					if( m_Hierarchical )
+					{
+						m_AssetList.CustomSearch = text;
+						m_AssetList.Reload();
+					}
+					else
+						m_AssetList.searchString = text;
+					
+					if( String.IsNullOrEmpty( text ) )
+						m_AssetList.ExpandForSelection();
+				}
+			}
+		}
+
+		private void SetSearchMode( bool hierarchical )
+		{
+			if( hierarchical == m_Hierarchical )
+				return;
+			
+			m_Hierarchical = hierarchical;
+			EditorPrefs.SetBool( "AuditWindow.AssetsTreeView.IsHierarchicalSearch", m_Hierarchical );
+			if( ! m_Hierarchical )
+			{
+				m_AssetList.searchString = m_AssetList.CustomSearch;
+				m_AssetList.CustomSearch = string.Empty;
+			}
+			else
+			{
+				m_AssetList.CustomSearch = m_AssetList.searchString;
+				m_AssetList.searchString = string.Empty;
+			}
+			
+			m_AssetList.Reload();
+		}
+
 		private void HandleResize()
 		{
 			Rect splitterRect = new Rect(0, (int)(position.height * m_SplitterPercent), position.width, 3);
@@ -242,37 +242,13 @@ namespace AssetTools
 			if (Event.current.type == EventType.MouseUp)
 				m_ResizingSplitter = false;
 		}
-	}
-	
-	
-	internal static class SearchField
-	{
 		private static class Styles
 		{
-			public static readonly GUIStyle searchField = "SearchTextField";
-			public static readonly GUIStyle searchFieldCancelButton = "SearchCancelButton";
-			public static readonly GUIStyle searchFieldCancelButtonEmpty = "SearchCancelButtonEmpty";
+			public static readonly GUIStyle searchField = "ToolbarSeachTextFieldPopup";
+			public static readonly GUIStyle searchFieldCancelButton = "ToolbarSeachCancelButton";
+			public static readonly GUIStyle searchFieldCancelButtonEmpty = "ToolbarSeachCancelButtonEmpty";
+			public static readonly GUIStyle button = "ToolbarButton";
 		}
-
-		public static string OnGUI( Rect position, string text )
-		{
-			// Search field 
-			Rect textRect = position;
-			textRect.width -= 15;
-			text = EditorGUI.TextField( textRect, GUIContent.none, text, Styles.searchField );
-
-			// Cancel button
-			Rect buttonRect = position;
-			buttonRect.x += position.width - 15;
-			buttonRect.width = 15;
-			if( GUI.Button( buttonRect, GUIContent.none,
-				    text != "" ? Styles.searchFieldCancelButton : Styles.searchFieldCancelButtonEmpty ) && text != "" )
-			{
-				text = "";
-				UnityEngine.GUIUtility.keyboardControl = 0;
-			}
-
-			return text;
-		}
+		
 	}
 }
