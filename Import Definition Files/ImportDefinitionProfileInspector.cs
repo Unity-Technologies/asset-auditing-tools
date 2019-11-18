@@ -188,8 +188,11 @@ namespace AssetTools
 				EditorGUI.LabelField( layout.Get(), "", UnityEngine.GUI.skin.horizontalSlider);
 			
 			layoutRect = layout.Get();
-			layoutRect.x = layoutRect.x + (layoutRect.width - 100);
-			layoutRect.width = 100;
+			if( layoutRect.width > 120 )
+			{
+				layoutRect.x = layoutRect.x + (layoutRect.width - 120);
+				layoutRect.width = 120;
+			}
 			
 			if (EditorGUI.DropdownButton( layoutRect, new GUIContent("Add Import Task", "Add new Task to this Definition."), FocusType.Keyboard))
 			{
