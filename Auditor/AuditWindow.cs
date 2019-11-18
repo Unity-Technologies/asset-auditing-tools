@@ -173,8 +173,8 @@ namespace AssetTools
 		private void OnSearchGUI( Rect barPosition )
 		{
 			string text = m_Hierarchical ? m_AssetList.CustomSearch : m_AssetList.searchString;
-			
-			Rect popupPosition = new Rect(barPosition.x, barPosition.y, 20, barPosition.width);
+
+			Rect popupPosition = new Rect( barPosition.x, barPosition.y, 20, 20 );
 			if (Event.current.type == EventType.MouseDown && popupPosition.Contains(Event.current.mousePosition))
 			{
 				var menu = new GenericMenu();
