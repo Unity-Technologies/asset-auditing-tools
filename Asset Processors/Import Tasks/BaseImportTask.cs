@@ -34,6 +34,11 @@ namespace AssetTools
 			get { return 0; }
 		}
 
+		public virtual int MaximumCount
+		{
+			get { return 1; }
+		}
+
 		public virtual string ImportTaskName
 		{
 			get { return this.GetType().Name; }
