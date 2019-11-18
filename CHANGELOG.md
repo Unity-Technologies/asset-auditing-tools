@@ -1,6 +1,10 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [0.0.X] - 2019-XX-XX
+- Changed search for have multiple search types
+- Changed top bar to use toolbar visuals
+
 ## [0.0.5] - 2019-10-09
 - Refactored the project and renaming the tools to better describe the functionality
     - note: Profiles made in the old naming will need to be reimported
