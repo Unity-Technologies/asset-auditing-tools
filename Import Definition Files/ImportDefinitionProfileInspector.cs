@@ -18,34 +18,31 @@ namespace AssetTools
 		private SerializedProperty m_ProcessOnImport;
 		private SerializedProperty m_FolderOnly;
 		private SerializedProperty m_FiltersListProperty;
-		private SerializedProperty m_Modules;
+		private SerializedProperty m_Tasks;
 		private SerializedProperty m_SortIndex;
 		
-		List<Type> m_ModuleTypes;
+		List<Type> m_ImportTaskTypes;
 		
 		// TODO serialiseFoldoutState??
-		List<bool> m_ModuleFoldoutStates = new List<bool>();
+		List<bool> m_ImportTaskFoldoutStates = new List<bool>();
 
 		void OnEnable()
 		{
 			m_ProcessOnImport = serializedObject.FindProperty( "m_RunOnImport" );
 			m_FolderOnly = serializedObject.FindProperty( "m_FilterToFolder" );
 			m_FiltersListProperty = serializedObject.FindProperty( "m_Filters" );
-			m_Modules = serializedObject.FindProperty( "m_ImportTasks" );
+			m_Tasks = serializedObject.FindProperty( "m_ImportTasks" );
 			m_SortIndex = serializedObject.FindProperty( "m_SortIndex" );
 			
-			m_ModuleTypes = ImportDefinitionProfileCache.GetTypes<BaseImportTask>();
+			m_ImportTaskTypes = ImportDefinitionProfileCache.GetTypes<BaseImportTask>();
 		}
 		
 		public override void OnInspectorGUI()
 		{
 			if( m_Profile == null )
 				m_Profile = (ImportDefinitionProfile) target;
-#if UNITY_2019_1_OR_NEWER
-			Rect viewRect = new Rect( 18, 0, EditorGUIUtility.currentViewWidth-23, EditorGUIUtility.singleLineHeight );
-#else
-			Rect viewRect = EditorGUILayout.GetControlRect( false );
-#endif
+			
+			Rect viewRect = GUILayoutUtility.GetRect( EditorGUIUtility.currentViewWidth-23, 0 );
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
 			
 			layout.Space( 10 );
@@ -140,14 +137,14 @@ namespace AssetTools
 			
 			EditorGUI.LabelField( layout.Get(), "", UnityEngine.GUI.skin.horizontalSlider);
 			
-			size = m_Modules.arraySize;
+			size = m_Tasks.arraySize;
 			for( int i = 0; i < size; ++i )
 			{
-				if( m_ModuleFoldoutStates.Count-1 < i )
-					m_ModuleFoldoutStates.Add( true );
+				if( m_ImportTaskFoldoutStates.Count-1 < i )
+					m_ImportTaskFoldoutStates.Add( true );
 				
-				SerializedProperty moduleProperty = m_Modules.GetArrayElementAtIndex( i );
-				BaseImportTask importTask = moduleProperty.objectReferenceValue as BaseImportTask;
+				SerializedProperty taskProperty = m_Tasks.GetArrayElementAtIndex( i );
+				BaseImportTask importTask = taskProperty.objectReferenceValue as BaseImportTask;
 				if( importTask == null )
 					continue;
 
@@ -155,7 +152,7 @@ namespace AssetTools
 					layout.Space( 10 );
 
 				Rect headerRect = layout.Get( 20 );
-				m_ModuleFoldoutStates[i] = EditorGUI.Foldout( headerRect, m_ModuleFoldoutStates[i], importTask.name, true );
+				m_ImportTaskFoldoutStates[i] = EditorGUI.Foldout( headerRect, m_ImportTaskFoldoutStates[i], importTask.name, true );
 				
 				Event current = Event.current;
 				if( headerRect.Contains( current.mousePosition ) )
@@ -165,17 +162,17 @@ namespace AssetTools
 						GenericMenu menu = new GenericMenu();
 						menu.AddDisabledItem( new GUIContent( "Move Up" ) );
 						menu.AddDisabledItem( new GUIContent( "Move Down" ) );
-						menu.AddItem( new GUIContent( "Delete Module" ), false, RemoveModuleCallback, i );
+						menu.AddItem( new GUIContent( "Delete Import Task" ), false, RemoveTaskCallback, i );
 						menu.ShowAsContext();
 						current.Use();
 					}
 					else if( current.type == EventType.MouseDown && current.button == 0 )
 					{
-						m_ModuleFoldoutStates[i] = !m_ModuleFoldoutStates[i];
+						m_ImportTaskFoldoutStates[i] = !m_ImportTaskFoldoutStates[i];
 					}
 				}
 
-				if( m_ModuleFoldoutStates[i] )
+				if( m_ImportTaskFoldoutStates[i] )
 				{
 					layout.BeginArea( 5, 5 );
 
@@ -194,54 +191,50 @@ namespace AssetTools
 			layoutRect.x = layoutRect.x + (layoutRect.width - 100);
 			layoutRect.width = 100;
 			
-			if (EditorGUI.DropdownButton( layoutRect, new GUIContent("Add Module", "Add new Module to this Definition."), FocusType.Keyboard))
+			if (EditorGUI.DropdownButton( layoutRect, new GUIContent("Add Import Task", "Add new Task to this Definition."), FocusType.Keyboard))
 			{
 				var menu = new GenericMenu();
-				for (int i = 0; i < m_ModuleTypes.Count; i++)
+				for (int i = 0; i < m_ImportTaskTypes.Count; i++)
 				{
-					var type = m_ModuleTypes[i];
-					menu.AddItem(new GUIContent(type.Name, ""), false, OnAddModule, type);
+					var type = m_ImportTaskTypes[i];
+					menu.AddItem(new GUIContent(type.Name, ""), false, OnAddImportTask, type);
 				}
 
 				menu.ShowAsContext();
 			}
 			
-#if UNITY_2019_1_OR_NEWER
-			// temporary solution to reserve the rect space for drawing in 2019.1+
-			// remove after Unity Editor bug is resolved, id: 1169234
 			GUILayoutUtility.GetRect( viewRect.width, layoutRect.y + layoutRect.height );
-#endif
 			serializedObject.ApplyModifiedProperties();
 		}
 
-		void RemoveModuleCallback( object context )
+		void RemoveTaskCallback( object context )
 		{
 			int index = (int) context;
-			if( m_Profile.RemoveModule( index ) )
+			if( m_Profile.RemoveTask( index ) )
 			{
-				m_Modules.DeleteArrayElementAtIndex( index );
-				m_Modules.MoveArrayElement( index, m_Modules.arraySize - 1 );
-				m_Modules.arraySize = m_Modules.arraySize - 1;
+				m_Tasks.DeleteArrayElementAtIndex( index );
+				m_Tasks.MoveArrayElement( index, m_Tasks.arraySize - 1 );
+				m_Tasks.arraySize = m_Tasks.arraySize - 1;
 				
-				m_ModuleFoldoutStates.RemoveAt( index );
+				m_ImportTaskFoldoutStates.RemoveAt( index );
 				
 				EditorUtility.SetDirty( m_Profile );
 				Repaint();
 			}
 		}
 		
-		void OnAddModule(object context)
+		void OnAddImportTask(object context)
 		{
 			Type t = context as Type;
-			Assert.IsNotNull( t, "Null Module Type" );
+			Assert.IsNotNull( t, "Null ImportTask Type" );
 
-			BaseImportTask addedImportTask = m_Profile.AddModule( t );
+			BaseImportTask addedImportTask = m_Profile.AddTask( t );
 			if( addedImportTask != null )
 			{
 				// keep the serialised property in sync
-				m_Modules.arraySize++;
-				m_Modules.GetArrayElementAtIndex( m_Modules.arraySize-1 ).objectReferenceValue = addedImportTask;
-				m_ModuleFoldoutStates.Add( true );
+				m_Tasks.arraySize++;
+				m_Tasks.GetArrayElementAtIndex( m_Tasks.arraySize-1 ).objectReferenceValue = addedImportTask;
+				m_ImportTaskFoldoutStates.Add( true );
 				
 				EditorUtility.SetDirty( m_Profile );
 				Repaint();

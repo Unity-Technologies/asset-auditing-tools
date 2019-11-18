@@ -14,11 +14,11 @@ namespace AssetTools
 		private SerializedProperty m_ImporterReferenceSerializedProperty;
 		private SerializedProperty m_ConstrainPropertiesSerializedProperty;
 		
-		public void Draw( SerializedObject moduleObject, ControlRect layout )
+		public void Draw( SerializedObject importTaskObject, ControlRect layout )
 		{
 			if( m_ImportTask == null )
 			{
-				m_ImportTask = moduleObject.targetObject as ImporterPropertiesImportTask;
+				m_ImportTask = importTaskObject.targetObject as ImporterPropertiesImportTask;
 				if( m_ImportTask == null )
 				{
 					Debug.LogError( "SerializedObject must be of type ImporterPropertiesImportTask" );
@@ -28,8 +28,8 @@ namespace AssetTools
 			
 			if( m_ImporterReferenceSerializedProperty == null || m_ConstrainPropertiesSerializedProperty == null )
 			{
-				m_ImporterReferenceSerializedProperty = moduleObject.FindProperty( "m_ImporterReference" );
-				m_ConstrainPropertiesSerializedProperty = moduleObject.FindProperty( "m_ConstrainProperties" );
+				m_ImporterReferenceSerializedProperty = importTaskObject.FindProperty( "m_ImporterReference" );
+				m_ConstrainPropertiesSerializedProperty = importTaskObject.FindProperty( "m_ConstrainProperties" );
 				if( m_ImporterReferenceSerializedProperty == null || m_ConstrainPropertiesSerializedProperty == null )
 				{
 					Debug.LogError( "Invalid properties for ImporterPropertiesImportTask" );
