@@ -11,7 +11,6 @@ namespace AssetTools
 		private TreeViewState m_AssetListState;
 		private AssetsTreeView m_AssetList;
 
-		private bool m_Hierarchical;
 		private SearchField m_SearchFieldInternal;
 
 		private TreeViewState m_PropertyListState;
@@ -63,7 +62,6 @@ namespace AssetTools
 
 		private void OnEnable()
 		{
-			m_Hierarchical = EditorPrefs.GetBool( "AuditWindow.AssetsTreeView.IsHierarchicalSearch", true );
 			m_SearchFieldInternal = new SearchField();
 		}
 
@@ -90,6 +88,8 @@ namespace AssetTools
 				selection = m_AssetList.GetSelection();
 			
 			m_AssetList = new AssetsTreeView( m_AssetListState );
+			
+			m_AssetList.SearchStyle = (HierarchyTreeView.SearchType)EditorPrefs.GetInt( "AuditWindow.AssetsTreeView.SearchStyle", 1 );
 			
 			if( profiles.Count > 0 && selected < profiles.Count )
 				m_AssetList.m_Profile = profiles[selected];
@@ -172,14 +172,16 @@ namespace AssetTools
 		
 		private void OnSearchGUI( Rect barPosition )
 		{
-			string text = m_Hierarchical ? m_AssetList.CustomSearch : m_AssetList.searchString;
+			string text = m_AssetList.CustomSearch;
 
 			Rect popupPosition = new Rect( barPosition.x, barPosition.y, 20, 20 );
 			if (Event.current.type == EventType.MouseDown && popupPosition.Contains(Event.current.mousePosition))
 			{
 				var menu = new GenericMenu();
-				menu.AddItem(new GUIContent("Hierarchical Search"), m_Hierarchical, () => SetSearchMode( true ));
-				menu.AddItem(new GUIContent("Flat Search"), !m_Hierarchical, () => SetSearchMode( false ));
+				menu.AddItem(new GUIContent("Hierarchical Search"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.Hierarchy, () => SetSearchMode( HierarchyTreeView.SearchType.Hierarchy ));
+				menu.AddItem(new GUIContent("Hierarchical Search (Assets Only)"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.HierarchyLeafOnly, () => SetSearchMode( HierarchyTreeView.SearchType.HierarchyLeafOnly ));
+				menu.AddItem(new GUIContent("Flat Search"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.Flat, () => SetSearchMode( HierarchyTreeView.SearchType.Flat ));
+				menu.AddItem(new GUIContent("Flat Search (Assets Only)"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.FlatLeafOnly, () => SetSearchMode( HierarchyTreeView.SearchType.FlatLeafOnly ));
 				menu.DropDown(popupPosition);
 			}
 			else
@@ -190,13 +192,8 @@ namespace AssetTools
 				{
 					text = searchString;
 					
-					if( m_Hierarchical )
-					{
-						m_AssetList.CustomSearch = text;
-						m_AssetList.Reload();
-					}
-					else
-						m_AssetList.searchString = text;
+					m_AssetList.CustomSearch = text;
+					m_AssetList.Reload();
 					
 					if( String.IsNullOrEmpty( text ) )
 						m_AssetList.ExpandForSelection();
@@ -204,24 +201,13 @@ namespace AssetTools
 			}
 		}
 
-		private void SetSearchMode( bool hierarchical )
+		private void SetSearchMode( HierarchyTreeView.SearchType searchType )
 		{
-			if( hierarchical == m_Hierarchical )
+			if( m_AssetList.SearchStyle == searchType )
 				return;
-			
-			m_Hierarchical = hierarchical;
-			EditorPrefs.SetBool( "AuditWindow.AssetsTreeView.IsHierarchicalSearch", m_Hierarchical );
-			if( ! m_Hierarchical )
-			{
-				m_AssetList.searchString = m_AssetList.CustomSearch;
-				m_AssetList.CustomSearch = string.Empty;
-			}
-			else
-			{
-				m_AssetList.CustomSearch = m_AssetList.searchString;
-				m_AssetList.searchString = string.Empty;
-			}
-			
+
+			m_AssetList.SearchStyle = searchType;
+			EditorPrefs.SetInt( "AuditWindow.AssetsTreeView.SearchStyle", (int)searchType );
 			m_AssetList.Reload();
 		}
 

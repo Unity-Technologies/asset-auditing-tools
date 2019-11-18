@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	public class AssetsTreeView : TreeView
+	public class AssetsTreeView : HierarchyTreeView
 	{
 		private class AssetViewItemMenuContext
 		{
@@ -25,14 +25,6 @@ namespace AssetTools
 		public ImportDefinitionProfile m_Profile;
 		private readonly List<AssetsTreeViewItem> m_SelectedItems = new List<AssetsTreeViewItem>();
 		internal ModularDetailTreeView m_ModularTreeView;
-
-		private string m_CustomSearch;
-
-		public string CustomSearch
-		{
-			get { return m_CustomSearch; }
-			set { m_CustomSearch = value; }
-		}
 
 		public AssetsTreeView( TreeViewState state ) : base( state )
 		{
@@ -237,77 +229,6 @@ namespace AssetTools
 			{
 				base.RowGUI( args );
 			}
-		}
-		
-		protected override bool CanChangeExpandedState( TreeViewItem item )
-		{
-			if( string.IsNullOrEmpty( m_CustomSearch ))
-				return base.CanChangeExpandedState( item );
-			return false;
-		}
-		
-		protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
-		{
-			if (!string.IsNullOrEmpty(m_CustomSearch))
-			{
-				List<TreeViewItem> searchedRows = new List<TreeViewItem>(100);
-				BuildSearchTreeRecursive( root, searchedRows );
-				return searchedRows;
-			}
-			
-			return base.BuildRows(root);
-		}
-
-		void BuildSearchTreeRecursive( TreeViewItem item, List<TreeViewItem> items )
-		{
-			if( item.hasChildren )
-			{
-				foreach( TreeViewItem child in item.children )
-				{
-					if( IsInSearch( m_CustomSearch, child ) )
-					{
-						items.Add( child );
-						BuildSearchTreeRecursive( child, items );
-					}
-				}
-			}
-		}
-
-		bool IsInSearch( string search, TreeViewItem item )
-		{
-			bool includedInSearch = item.displayName.Contains( search );
-			if( !includedInSearch && item.hasChildren )
-			{
-				foreach( TreeViewItem t in item.children )
-				{
-					if( IsInSearch( search, t ) )
-					{
-						includedInSearch = true;
-						break;
-					}
-				}
-			}
-			return includedInSearch;
-		}
-		
-		internal void ExpandForSelection( )
-		{
-			List<int> toExpand = new List<int>(GetExpanded());
-			
-			foreach( AssetsTreeViewItem pathItem in m_SelectedItems )
-			{
-				if( pathItem == null )
-					continue;
-				TreeViewItem p = pathItem;
-				while( p.parent != null )
-				{
-					p = p.parent;
-					if( rootItem != p && ! toExpand.Contains( p.id ))
-						toExpand.Add( p.id );
-				}
-			}
-			
-			SetExpanded( toExpand );
 		}
 
 		protected override void SelectionChanged( IList<int> selectedIds )
