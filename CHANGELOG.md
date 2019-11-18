@@ -3,6 +3,7 @@ All notable changes will be documented in this file.
 
 ## [0.0.X] - 2019-XX-XX
 - Changed search for have multiple search types
+- Changed search to case-insensitive by default, adding option is search options
 - Changed top bar to use toolbar visuals
 
 ## [0.0.5] - 2019-10-09
