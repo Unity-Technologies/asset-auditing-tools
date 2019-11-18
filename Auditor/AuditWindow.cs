@@ -90,6 +90,7 @@ namespace AssetTools
 			m_AssetList = new AssetsTreeView( m_AssetListState );
 			
 			m_AssetList.SearchStyle = (HierarchyTreeView.SearchType)EditorPrefs.GetInt( "AuditWindow.AssetsTreeView.SearchStyle", 1 );
+			m_AssetList.SearchCaseSensitive = EditorPrefs.GetBool( "AuditWindow.AssetsTreeView.SearchCaseSensitivity", false );
 			
 			if( profiles.Count > 0 && selected < profiles.Count )
 				m_AssetList.m_Profile = profiles[selected];
@@ -182,6 +183,13 @@ namespace AssetTools
 				menu.AddItem(new GUIContent("Hierarchical Search (Assets Only)"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.HierarchyLeafOnly, () => SetSearchMode( HierarchyTreeView.SearchType.HierarchyLeafOnly ));
 				menu.AddItem(new GUIContent("Flat Search"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.Flat, () => SetSearchMode( HierarchyTreeView.SearchType.Flat ));
 				menu.AddItem(new GUIContent("Flat Search (Assets Only)"), m_AssetList.SearchStyle == HierarchyTreeView.SearchType.FlatLeafOnly, () => SetSearchMode( HierarchyTreeView.SearchType.FlatLeafOnly ));
+				menu.AddSeparator( "" );
+				menu.AddItem( new GUIContent( "Case Sensitive" ), m_AssetList.SearchCaseSensitive, () =>
+				{
+					m_AssetList.SearchCaseSensitive = !m_AssetList.SearchCaseSensitive;
+					EditorPrefs.SetBool( "AuditWindow.AssetsTreeView.SearchCaseSensitivity", m_AssetList.SearchCaseSensitive );
+					m_AssetList.Reload();
+				} );
 				menu.DropDown(popupPosition);
 			}
 			else

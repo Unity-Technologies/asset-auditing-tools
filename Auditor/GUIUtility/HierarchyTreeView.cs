@@ -19,6 +19,7 @@ namespace AssetTools
 		
 		private string m_CustomSearch;
 		private SearchType m_SearchType;
+		private bool m_CaseSensitive;
 
 		public string CustomSearch
 		{
@@ -30,6 +31,12 @@ namespace AssetTools
 		{
 			get { return m_SearchType; }
 			set { m_SearchType = value;  }
+		}
+		
+		public bool SearchCaseSensitive
+		{
+			get { return m_CaseSensitive; }
+			set { m_CaseSensitive = value;  }
 		}
 
 		protected HierarchyTreeView( TreeViewState state ) : base( state )
@@ -105,13 +112,13 @@ namespace AssetTools
 			}
 		}
 
-		private static bool IsInSearch( string search, TreeViewItem item, bool leafOnly )
+		private bool IsInSearch( string search, TreeViewItem item, bool leafOnly )
 		{
 			bool includedInSearch = false;
 			if( item.hasChildren )
 			{
 				if( !leafOnly )
-					includedInSearch = item.displayName.Contains( search );
+					includedInSearch = item.displayName.IndexOf( search, m_CaseSensitive ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase ) >= 0;
 				if( !includedInSearch )
 				{
 					foreach( TreeViewItem t in item.children )
@@ -125,7 +132,7 @@ namespace AssetTools
 				}
 			}
 			else
-				includedInSearch = item.displayName.Contains( search );
+				includedInSearch = item.displayName.IndexOf( search, m_CaseSensitive ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase ) >= 0;
 			
 			return includedInSearch;
 		}
