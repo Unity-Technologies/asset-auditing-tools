@@ -23,12 +23,15 @@ namespace AssetTools
 		private bool editSelective;
 		private int editSelectiveProp;
 
-		private float m_SplitterPercent = 0.8f;
+		private float m_SplitterPercent = 0.7f;
 		private bool m_ResizingSplitter;
 
 		private const float horizontalBuffer = 5f;
 		private const float k_toolBarY = 0;
 		private const float k_toolBarHeight = 17f;
+		
+		[SerializeField]
+		MultiColumnHeaderState m_ConformTreeHeaderState;
 		
 		private float ContentX
 		{
@@ -98,13 +101,61 @@ namespace AssetTools
 			
 			if( m_PropertyListState == null )
 				m_PropertyListState = new TreeViewState();
-			
-			m_ModularTreeView = new ModularDetailTreeView( m_PropertyListState );
+			if( m_ModularTreeView == null )
+			{
+				MultiColumnHeaderState headerState = CreateDefaultMultiColumnHeaderState();
+				if( MultiColumnHeaderState.CanOverwriteSerializedFields( m_ConformTreeHeaderState, headerState ) )
+					MultiColumnHeaderState.OverwriteSerializedFields( m_ConformTreeHeaderState, headerState );
+				m_ConformTreeHeaderState = headerState;
+				m_ModularTreeView = new ModularDetailTreeView( m_PropertyListState, m_ConformTreeHeaderState );
+			}
 			m_AssetList.m_ModularTreeView = m_ModularTreeView;
 			m_ModularTreeView.Reload();
 
 			if( selection != null )
 				m_AssetList.SetupSelection( selection );
+		}
+		
+		internal static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState()
+		{
+			var retVal = new MultiColumnHeaderState.Column[4];
+			retVal[0] = new MultiColumnHeaderState.Column();
+			retVal[0].headerContent = new GUIContent( EditorGUIUtility.FindTexture("FilterSelectedOnly"), "Does this element conform to the expected?");
+			retVal[0].minWidth = 20;
+			retVal[0].width = 20;
+			retVal[0].maxWidth = 20;
+			retVal[0].headerTextAlignment = TextAlignment.Left;
+			retVal[0].canSort = true;
+			retVal[0].autoResize = true;
+
+			retVal[1] = new MultiColumnHeaderState.Column();
+			retVal[1].headerContent = new GUIContent("Property Name", "Name of the Property or Parent to Property");
+			retVal[1].minWidth = 150;
+			retVal[1].width = 300;
+			retVal[1].maxWidth = 1000;
+			retVal[1].headerTextAlignment = TextAlignment.Left;
+			retVal[1].canSort = true;
+			retVal[1].autoResize = true;
+
+			retVal[2] = new MultiColumnHeaderState.Column();
+			retVal[2].headerContent = new GUIContent("Expected Value", "The value expected");
+			retVal[2].minWidth = 100;
+			retVal[2].width = 150;
+			retVal[2].maxWidth = 400;
+			retVal[2].headerTextAlignment = TextAlignment.Left;
+			retVal[2].canSort = false;
+			retVal[2].autoResize = true;
+
+			retVal[3] = new MultiColumnHeaderState.Column();
+			retVal[3].headerContent = new GUIContent("Actual Value", "The actual value reported");
+			retVal[3].minWidth = 100;
+			retVal[3].width = 150;
+			retVal[3].maxWidth = 400;
+			retVal[3].headerTextAlignment = TextAlignment.Left;
+			retVal[3].canSort = false;
+			retVal[3].autoResize = true;
+
+			return new MultiColumnHeaderState(retVal);
 		}
 		
 		void GetAuditorProfiles()
@@ -137,7 +188,7 @@ namespace AssetTools
 			float viewY = k_toolBarY + k_toolBarHeight;
 			m_AssetList.OnGUI( new Rect( 0, viewY, position.width, (int)(position.height * m_SplitterPercent) - viewY ) );
 			
-			viewY = (int)(position.height * m_SplitterPercent) + 3;
+			viewY = (int)(position.height * m_SplitterPercent);
 			m_ModularTreeView.OnGUI( new Rect( 0, viewY, position.width, position.height - viewY ) );
 			
 			if( m_ResizingSplitter )

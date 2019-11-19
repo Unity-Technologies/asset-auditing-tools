@@ -35,10 +35,7 @@ namespace AssetTools
 
 		public string Name
 		{
-			get
-			{
-				return m_MethodName + ", <<< " + ExpectedValue;
-			}
+			get { return m_MethodName; }
 			set { m_MethodName = value; }
 		}
 

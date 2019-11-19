@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -13,9 +12,11 @@ namespace AssetTools
 
 		private List<AssetsTreeViewItem> m_SelectedItems;
 		
-		public ModularDetailTreeView( TreeViewState state ) : base( state )
+		public ModularDetailTreeView( TreeViewState state, MultiColumnHeaderState mchs ) : base( state, new MultiColumnHeader( mchs ) )
 		{
 			showBorder = true;
+			showAlternatingRowBackgrounds = true;
+			columnIndexForTreeFoldouts = 1;
 		}
 
 		public void SetSelectedAssetItems( List<AssetsTreeViewItem> selection )
@@ -84,46 +85,90 @@ namespace AssetTools
 		protected override void RowGUI( RowGUIArgs args )
 		{
 			ConformObjectTreeViewItem item = args.item as ConformObjectTreeViewItem;
-			if( item != null )
+			if( item == null )
 			{
-				float num = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
-
-				Rect r = args.rowRect;
-				if( args.item.icon != null )
-				{
-					r.xMin += num;
-					r.width = r.height;
-					GUI.DrawTexture( r, args.item.icon );
-				}
-
-				Color old = GUI.color;
-				if( item.conforms == false )
-					GUI.color = k_ConformFailColor;
+				Debug.LogWarning( "Unknown TreeViewItem for conform tree" );
+				return;
+			}
+			
+			for (int i = 0; i < args.GetNumVisibleColumns (); ++i)
+			{
+				if( i == 0 )
+					ConformsGUI(args.GetCellRect(i), item);
+				else if( i == 1 )
+					PropertyNameGUI(args.GetCellRect(i), item, ref args);
+				else if( i == 2 && item.conformObject != null )
+					ExpectedValueGUI(args.GetCellRect(i), item);
+				else if( i == 3 && item.conformObject != null )
+					ActualValueGUI(args.GetCellRect(i), item);
 				
-				// This displays what the current value is
-				if( item.conformObject != null && r.width > 400 )
-				{
-					Rect or = new Rect(r);
-					or.x += r.width - 100;
-					or.width = 100;
-					EditorGUI.LabelField( or, item.conformObject.ActualValue );
-				}
+			}
+		}
+		
+		void ConformsGUI( Rect cellRect, ConformObjectTreeViewItem item )
+		{
+			if( !item.conforms )
+			{
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor * 0.8f;
+				GUI.DrawTexture( cellRect, EditorGUIUtility.FindTexture( "LookDevClose@2x" ) );
+				GUI.color = old;
+			}
+		}
 
-				r = args.rowRect;
-				r.xMin += num;
-				if( args.item.icon != null )
-				{
-					r.x += r.height + 2f;
-					r.width -= r.height + 2f;
-				}
-
-				EditorGUI.LabelField( r, args.label );
+		void ActualValueGUI( Rect cellRect, ConformObjectTreeViewItem item )
+		{
+			Rect labelRect = cellRect;
+			if( item.conforms == false )
+			{
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor;
+				EditorGUI.LabelField( labelRect, item.conformObject.ActualValue );
 				GUI.color = old;
 			}
 			else
+				EditorGUI.LabelField( labelRect, item.conformObject.ActualValue );
+		}
+		
+		void ExpectedValueGUI( Rect cellRect, ConformObjectTreeViewItem item )
+		{
+			Rect labelRect = cellRect;
+			if( item.conforms == false )
 			{
-				base.RowGUI( args );
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor;
+				EditorGUI.LabelField( labelRect, item.conformObject.ExpectedValue );
+				GUI.color = old;
 			}
+			else
+				EditorGUI.LabelField( labelRect, item.conformObject.ExpectedValue );
+		}
+		
+		void PropertyNameGUI( Rect cellRect, ConformObjectTreeViewItem item, ref RowGUIArgs args )
+		{
+			float indent = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
+
+			Rect labelRect = cellRect;
+			labelRect.xMin += indent;
+			Rect iconRect = cellRect;
+			if( args.item.icon != null )
+			{
+				iconRect.xMin += indent;
+				iconRect.width = iconRect.height;
+				GUI.DrawTexture( iconRect, args.item.icon );
+				labelRect.x += 18;
+				labelRect.width -= 18;
+			}
+			
+			if( item.conforms == false )
+			{
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor;
+				EditorGUI.LabelField( labelRect, args.label );
+				GUI.color = old;
+			}
+			else
+				EditorGUI.LabelField( labelRect, args.label );
 		}
 
 		protected override void ContextClickedItem( int id )
