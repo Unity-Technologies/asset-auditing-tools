@@ -160,8 +160,16 @@ namespace AssetTools
 					if( (current.type == EventType.MouseDown && current.button == 1) || current.type == EventType.ContextClick )
 					{
 						GenericMenu menu = new GenericMenu();
-						menu.AddDisabledItem( new GUIContent( "Move Up" ) );
-						menu.AddDisabledItem( new GUIContent( "Move Down" ) );
+						if( i == 0 )
+							menu.AddDisabledItem( new GUIContent( "Move Up" ) );
+						else
+							menu.AddItem( new GUIContent( "Move Up" ), false, MoveTaskUpCallback, i );
+						if( i == size-1 )
+							menu.AddDisabledItem( new GUIContent( "Move Down" ) );
+						else
+							menu.AddItem( new GUIContent( "Move Down" ), false, MoveTaskDownCallback, i );
+						
+						menu.AddSeparator( "" );
 						menu.AddItem( new GUIContent( "Delete Import Task" ), false, RemoveTaskCallback, i );
 						menu.ShowAsContext();
 						current.Use();
@@ -213,6 +221,7 @@ namespace AssetTools
 		void RemoveTaskCallback( object context )
 		{
 			int index = (int) context;
+			// Ask first?
 			if( m_Profile.RemoveTask( index ) )
 			{
 				m_Tasks.DeleteArrayElementAtIndex( index );
@@ -224,6 +233,20 @@ namespace AssetTools
 				EditorUtility.SetDirty( m_Profile );
 				Repaint();
 			}
+		}
+		
+		void MoveTaskUpCallback( object context )
+		{
+			int index = (int) context;
+			m_Tasks.MoveArrayElement( index, index-1 );
+			Repaint();
+		}
+		
+		void MoveTaskDownCallback( object context )
+		{
+			int index = (int) context;
+			m_Tasks.MoveArrayElement( index, index+1 );
+			Repaint();
 		}
 		
 		void OnAddImportTask(object context)

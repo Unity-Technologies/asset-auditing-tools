@@ -50,7 +50,6 @@ Import Definition Profiles
 - Track movement and changes to profiles to reimport any Assets where necessary.
 - Look into custom Importer for the ScriptableObject for IDF. So it can Apply -> Then allowing reimport any required Assets on Apply.
 - Order task into Pre and Post import sections
-- Allow ordering task for which task runs when
 - rework UX of the profile inspector gui
 
 
