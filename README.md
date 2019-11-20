@@ -49,11 +49,10 @@ Import Definition Profiles
     - This would still need a way of saving what versions they were previously imported with for auditing. 
 - Track movement and changes to profiles to reimport any Assets where necessary.
 - Look into custom Importer for the ScriptableObject for IDF. So it can Apply -> Then allowing reimport any required Assets on Apply.
+    - Need to investigate import order and if this is needed to effect that
 - Order task into Pre and Post import sections
 - rework UX of the profile inspector gui
-
 
 Auditor Window
 - Multiselect and fix working
 - Ability to fix a folder
-- Multi column view instead of single tree with value <<< value
