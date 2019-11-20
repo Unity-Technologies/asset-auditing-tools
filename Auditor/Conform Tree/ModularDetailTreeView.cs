@@ -9,13 +9,81 @@ namespace AssetTools
 {
 	internal class ModularDetailTreeView : TreeView
 	{
+		internal class ItemTree
+		{
+			private ConformObjectTreeViewItem item;
+			private List<ItemTree> children;
+
+			public int Depth
+			{
+				get { return item == null ? -1 : item.depth; }
+			}
+
+			public ItemTree( ConformObjectTreeViewItem i )
+			{
+				item = i;
+				children = new List<ItemTree>();
+			}
+
+			public void AddChild( ItemTree item )
+			{
+				children.Add( item );
+			}
+
+			public void Sort( int[] columnSortOrder, bool[] isColumnAscending )
+			{
+				children.Sort( delegate( ItemTree a, ItemTree b )
+				{
+					int rtn = 0;
+					for( int i = 0; i < columnSortOrder.Length; i++ )
+					{
+						if( columnSortOrder[i] == 0 )
+						{
+							rtn = isColumnAscending[i] ? a.item.conforms.CompareTo( b.item.conforms )
+								: b.item.conforms.CompareTo( a.item.conforms );
+							if( rtn == 0 )
+								continue;
+							return rtn;
+						}
+						else if( columnSortOrder[i] == 1 )
+						{
+							rtn = isColumnAscending[i] ? string.Compare( a.item.displayName, b.item.displayName, StringComparison.Ordinal )
+								: string.Compare( b.item.displayName, a.item.displayName, StringComparison.Ordinal );
+							if( rtn == 0 )
+								continue;
+							return rtn;
+						}
+					}
+
+					return rtn;
+				});
+				
+				foreach( ItemTree child in children )
+					child.Sort( columnSortOrder, isColumnAscending );
+			}
+
+			public void ToList(List<TreeViewItem> list)
+			{
+				// TODO be good to optimise this, rarely used, so not required
+				if( item != null )
+					list.Add( item );
+				foreach( ItemTree child in children )
+					child.ToList( list );
+			}
+		}
+		
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 
 		private List<AssetsTreeViewItem> m_SelectedItems;
+		private Texture2D m_UnconformedTexture;
 		
-		public ModularDetailTreeView( TreeViewState state ) : base( state )
+		public ModularDetailTreeView( TreeViewState state, MultiColumnHeaderState headerState ) : base( state, new MultiColumnHeader( headerState ) )
 		{
 			showBorder = true;
+			showAlternatingRowBackgrounds = true;
+			columnIndexForTreeFoldouts = 1;
+			m_UnconformedTexture = EditorGUIUtility.FindTexture( "LookDevClose@2x" );
+			multiColumnHeader.sortingChanged += OnSortingChanged;
 		}
 
 		public void SetSelectedAssetItems( List<AssetsTreeViewItem> selection )
@@ -80,50 +148,159 @@ namespace AssetTools
 				}
 			}
 		}
+		
+		protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
+		{
+			var rows = base.BuildRows (root);
+			SortIfNeeded(root, rows);
+			return rows;
+		}
+
+		void OnSortingChanged (MultiColumnHeader multiColumnHeader)
+		{
+			if( multiColumnHeader.sortedColumnIndex == -1 )
+				return;
+			SortIfNeeded(rootItem, GetRows());
+		}
+		void SortIfNeeded( TreeViewItem root, IList<TreeViewItem> rows )
+		{
+			if(multiColumnHeader.sortedColumnIndex == -1)
+				return;
+			SortByMultipleColumns(rows);
+			Repaint();
+		}
+
+		void SortByMultipleColumns( IList<TreeViewItem> rows )
+		{
+			int[] sortedColumns = multiColumnHeader.state.sortedColumns;
+			if (sortedColumns.Length == 0)
+				return;
+			
+			bool[] columnAscending = new bool[sortedColumns.Length];
+			for( int i = 0; i < sortedColumns.Length; i++ )
+				columnAscending[i] = multiColumnHeader.IsSortedAscending( sortedColumns[i] );
+
+			ItemTree root = new ItemTree(null);
+			Stack<ItemTree> stack = new Stack<ItemTree>();
+			stack.Push( root );
+			foreach( TreeViewItem row in rows )
+			{
+				ConformObjectTreeViewItem r = row as ConformObjectTreeViewItem;
+				if( r == null )
+					continue;
+				int activeParentDepth = stack.Peek().Depth;
+				
+				while( row.depth <= activeParentDepth )
+				{
+					stack.Pop();
+					activeParentDepth = stack.Peek().Depth;
+				}
+				
+				if( row.depth > activeParentDepth )
+				{
+					ItemTree t = new ItemTree(r);
+					stack.Peek().AddChild(t);
+					stack.Push(t);
+				}
+			}
+			
+			root.Sort( sortedColumns, columnAscending );
+
+			// convert back to rows
+			List<TreeViewItem> newRows = new List<TreeViewItem>(rows.Count);
+			root.ToList( newRows );
+			rows.Clear();
+			foreach( TreeViewItem treeViewItem in newRows )
+				rows.Add( treeViewItem );
+		}
 
 		protected override void RowGUI( RowGUIArgs args )
 		{
 			ConformObjectTreeViewItem item = args.item as ConformObjectTreeViewItem;
-			if( item != null )
+			if( item == null )
 			{
-				float num = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
-
-				Rect r = args.rowRect;
-				if( args.item.icon != null )
-				{
-					r.xMin += num;
-					r.width = r.height;
-					GUI.DrawTexture( r, args.item.icon );
-				}
-
-				Color old = GUI.color;
-				if( item.conforms == false )
-					GUI.color = k_ConformFailColor;
+				Debug.LogWarning( "Unknown TreeViewItem for conform tree" );
+				return;
+			}
+			
+			for (int i = 0; i < args.GetNumVisibleColumns (); ++i)
+			{
+				if( i == 0 )
+					ConformsGUI(args.GetCellRect(i), item);
+				else if( i == 1 )
+					PropertyNameGUI(args.GetCellRect(i), item, ref args);
+				else if( i == 2 && item.conformObject != null )
+					ExpectedValueGUI(args.GetCellRect(i), item);
+				else if( i == 3 && item.conformObject != null )
+					ActualValueGUI(args.GetCellRect(i), item);
 				
-				// This displays what the current value is
-				if( item.conformObject != null && r.width > 400 )
-				{
-					Rect or = new Rect(r);
-					or.x += r.width - 100;
-					or.width = 100;
-					EditorGUI.LabelField( or, item.conformObject.ActualValue );
-				}
+			}
+		}
+		
+		void ConformsGUI( Rect cellRect, ConformObjectTreeViewItem item )
+		{
+			if( !item.conforms )
+			{
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor * 0.8f;
+				GUI.DrawTexture( cellRect, m_UnconformedTexture );
+				GUI.color = old;
+			}
+		}
 
-				r = args.rowRect;
-				r.xMin += num;
-				if( args.item.icon != null )
-				{
-					r.x += r.height + 2f;
-					r.width -= r.height + 2f;
-				}
-
-				EditorGUI.LabelField( r, args.label );
+		void ActualValueGUI( Rect cellRect, ConformObjectTreeViewItem item )
+		{
+			Rect labelRect = cellRect;
+			if( item.conforms == false )
+			{
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor;
+				EditorGUI.LabelField( labelRect, item.conformObject.ActualValue );
 				GUI.color = old;
 			}
 			else
+				EditorGUI.LabelField( labelRect, item.conformObject.ActualValue );
+		}
+		
+		void ExpectedValueGUI( Rect cellRect, ConformObjectTreeViewItem item )
+		{
+			Rect labelRect = cellRect;
+			if( item.conforms == false )
 			{
-				base.RowGUI( args );
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor;
+				EditorGUI.LabelField( labelRect, item.conformObject.ExpectedValue );
+				GUI.color = old;
 			}
+			else
+				EditorGUI.LabelField( labelRect, item.conformObject.ExpectedValue );
+		}
+		
+		void PropertyNameGUI( Rect cellRect, ConformObjectTreeViewItem item, ref RowGUIArgs args )
+		{
+			float indent = GetContentIndent( item ) + extraSpaceBeforeIconAndLabel;
+
+			Rect labelRect = cellRect;
+			labelRect.xMin += indent;
+			Rect iconRect = cellRect;
+			if( args.item.icon != null )
+			{
+				iconRect.xMin += indent;
+				iconRect.width = iconRect.height;
+				GUI.DrawTexture( iconRect, args.item.icon );
+				labelRect.x += 18;
+				labelRect.width -= 18;
+			}
+			
+			if( item.conforms == false )
+			{
+				Color old = GUI.color;
+				GUI.color = k_ConformFailColor;
+				EditorGUI.LabelField( labelRect, args.label );
+				GUI.color = old;
+			}
+			else
+				EditorGUI.LabelField( labelRect, args.label );
 		}
 
 		protected override void ContextClickedItem( int id )
