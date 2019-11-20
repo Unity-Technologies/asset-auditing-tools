@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -8,15 +9,81 @@ namespace AssetTools
 {
 	internal class ModularDetailTreeView : TreeView
 	{
+		internal class ItemTree
+		{
+			private ConformObjectTreeViewItem item;
+			private List<ItemTree> children;
+
+			public int Depth
+			{
+				get { return item == null ? -1 : item.depth; }
+			}
+
+			public ItemTree( ConformObjectTreeViewItem i )
+			{
+				item = i;
+				children = new List<ItemTree>();
+			}
+
+			public void AddChild( ItemTree item )
+			{
+				children.Add( item );
+			}
+
+			public void Sort( int[] columnSortOrder, bool[] isColumnAscending )
+			{
+				children.Sort( delegate( ItemTree a, ItemTree b )
+				{
+					int rtn = 0;
+					for( int i = 0; i < columnSortOrder.Length; i++ )
+					{
+						if( columnSortOrder[i] == 0 )
+						{
+							rtn = isColumnAscending[i] ? a.item.conforms.CompareTo( b.item.conforms )
+								: b.item.conforms.CompareTo( a.item.conforms );
+							if( rtn == 0 )
+								continue;
+							return rtn;
+						}
+						else if( columnSortOrder[i] == 1 )
+						{
+							rtn = isColumnAscending[i] ? string.Compare( a.item.displayName, b.item.displayName, StringComparison.Ordinal )
+								: string.Compare( b.item.displayName, a.item.displayName, StringComparison.Ordinal );
+							if( rtn == 0 )
+								continue;
+							return rtn;
+						}
+					}
+
+					return rtn;
+				});
+				
+				foreach( ItemTree child in children )
+					child.Sort( columnSortOrder, isColumnAscending );
+			}
+
+			public void ToList(List<TreeViewItem> list)
+			{
+				// TODO be good to optimise this, rarely used, so not required
+				if( item != null )
+					list.Add( item );
+				foreach( ItemTree child in children )
+					child.ToList( list );
+			}
+		}
+		
 		private static readonly Color k_ConformFailColor = new Color( 1f, 0.5f, 0.5f );
 
 		private List<AssetsTreeViewItem> m_SelectedItems;
+		private Texture2D m_UnconformedTexture;
 		
-		public ModularDetailTreeView( TreeViewState state, MultiColumnHeaderState mchs ) : base( state, new MultiColumnHeader( mchs ) )
+		public ModularDetailTreeView( TreeViewState state, MultiColumnHeaderState headerState ) : base( state, new MultiColumnHeader( headerState ) )
 		{
 			showBorder = true;
 			showAlternatingRowBackgrounds = true;
 			columnIndexForTreeFoldouts = 1;
+			m_UnconformedTexture = EditorGUIUtility.FindTexture( "LookDevClose@2x" );
+			multiColumnHeader.sortingChanged += OnSortingChanged;
 		}
 
 		public void SetSelectedAssetItems( List<AssetsTreeViewItem> selection )
@@ -81,6 +148,71 @@ namespace AssetTools
 				}
 			}
 		}
+		
+		protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
+		{
+			var rows = base.BuildRows (root);
+			SortIfNeeded(root, rows);
+			return rows;
+		}
+
+		void OnSortingChanged (MultiColumnHeader multiColumnHeader)
+		{
+			if( multiColumnHeader.sortedColumnIndex == -1 )
+				return;
+			SortIfNeeded(rootItem, GetRows());
+		}
+		void SortIfNeeded( TreeViewItem root, IList<TreeViewItem> rows )
+		{
+			if(multiColumnHeader.sortedColumnIndex == -1)
+				return;
+			SortByMultipleColumns(rows);
+			Repaint();
+		}
+
+		void SortByMultipleColumns( IList<TreeViewItem> rows )
+		{
+			int[] sortedColumns = multiColumnHeader.state.sortedColumns;
+			if (sortedColumns.Length == 0)
+				return;
+			
+			bool[] columnAscending = new bool[sortedColumns.Length];
+			for( int i = 0; i < sortedColumns.Length; i++ )
+				columnAscending[i] = multiColumnHeader.IsSortedAscending( sortedColumns[i] );
+
+			ItemTree root = new ItemTree(null);
+			Stack<ItemTree> stack = new Stack<ItemTree>();
+			stack.Push( root );
+			foreach( TreeViewItem row in rows )
+			{
+				ConformObjectTreeViewItem r = row as ConformObjectTreeViewItem;
+				if( r == null )
+					continue;
+				int activeParentDepth = stack.Peek().Depth;
+				
+				while( row.depth <= activeParentDepth )
+				{
+					stack.Pop();
+					activeParentDepth = stack.Peek().Depth;
+				}
+				
+				if( row.depth > activeParentDepth )
+				{
+					ItemTree t = new ItemTree(r);
+					stack.Peek().AddChild(t);
+					stack.Push(t);
+				}
+			}
+			
+			root.Sort( sortedColumns, columnAscending );
+
+			// convert back to rows
+			List<TreeViewItem> newRows = new List<TreeViewItem>(rows.Count);
+			root.ToList( newRows );
+			rows.Clear();
+			foreach( TreeViewItem treeViewItem in newRows )
+				rows.Add( treeViewItem );
+		}
 
 		protected override void RowGUI( RowGUIArgs args )
 		{
@@ -111,7 +243,7 @@ namespace AssetTools
 			{
 				Color old = GUI.color;
 				GUI.color = k_ConformFailColor * 0.8f;
-				GUI.DrawTexture( cellRect, EditorGUIUtility.FindTexture( "LookDevClose@2x" ) );
+				GUI.DrawTexture( cellRect, m_UnconformedTexture );
 				GUI.color = old;
 			}
 		}
