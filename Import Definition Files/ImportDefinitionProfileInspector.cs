@@ -41,7 +41,11 @@ namespace AssetTools
 		{
 			if( m_Profile == null )
 				m_Profile = (ImportDefinitionProfile) target;
-			
+      
+			//while asset is being created, path can't be determined, which throws an exception when setting up the filters
+			if(string.IsNullOrEmpty(AssetDatabase.GetAssetPath(m_Profile)))
+				return;
+        
 			Rect viewRect = GUILayoutUtility.GetRect( EditorGUIUtility.currentViewWidth-23, 0 );
 			ControlRect layout = new ControlRect( viewRect.x, viewRect.y, viewRect.width );
 			
