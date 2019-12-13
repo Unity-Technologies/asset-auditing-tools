@@ -17,7 +17,12 @@ namespace AssetTools
 		public int m_SortIndex = 0;
 		
 		[SerializeField] private List<Filter> m_Filters;
-		
+
+		public List<Filter> Filters
+		{
+			get{ return m_Filters == null ? new List<Filter>() : new List<Filter>(m_Filters); }
+		}
+
 		private string m_DirectoryPath = null;
 		
 		[FormerlySerializedAs( "m_Modules" )]
@@ -36,7 +41,7 @@ namespace AssetTools
 
 		public List<Filter> GetFilters( bool userFiltersOnly = false )
 		{
-			List<Filter> filters = new List<Filter>(m_Filters);
+			List<Filter> filters =Filters;
 			if( m_FilterToFolder )
 				filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
 			return filters;
@@ -62,7 +67,7 @@ namespace AssetTools
 			{
 				if( m_FilterToFolder )
 				{
-					List<Filter> filters = new List<Filter>(m_Filters);
+					List<Filter> filters = Filters;
 					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
 					if( Filter.Conforms( context.Importer, filters ) == false )
 						return;
@@ -120,7 +125,7 @@ namespace AssetTools
 			{
 				if( m_FilterToFolder )
 				{
-					List<Filter> filters = new List<Filter>(m_Filters);
+					List<Filter> filters = Filters;
 					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
 					if( Filter.Conforms( context.Importer, filters ) == false )
 						return;
