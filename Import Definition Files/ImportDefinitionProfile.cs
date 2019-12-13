@@ -17,7 +17,12 @@ namespace AssetTools
 		public int m_SortIndex = 0;
 		
 		[SerializeField] private List<Filter> m_Filters;
-		
+
+		public List<Filter> Filters
+		{
+			get{ return m_Filters == null ? new List<Filter>() : new List<Filter>(m_Filters); }
+		}
+
 		private string m_DirectoryPath = null;
 		
 		[FormerlySerializedAs( "m_Modules" )]
@@ -36,7 +41,7 @@ namespace AssetTools
 
 		public List<Filter> GetFilters( bool userFiltersOnly = false )
 		{
-			List<Filter> filters = new List<Filter>(m_Filters);
+			List<Filter> filters =Filters;
 			if( m_FilterToFolder )
 				filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
 			return filters;
@@ -62,7 +67,7 @@ namespace AssetTools
 			{
 				if( m_FilterToFolder )
 				{
-					List<Filter> filters = new List<Filter>(m_Filters);
+					List<Filter> filters = Filters;
 					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
 					if( Filter.Conforms( context.Importer, filters ) == false )
 						return;
@@ -120,7 +125,7 @@ namespace AssetTools
 			{
 				if( m_FilterToFolder )
 				{
-					List<Filter> filters = new List<Filter>(m_Filters);
+					List<Filter> filters = Filters;
 					filters.Add( new Filter( Filter.ConditionTarget.Directory, Filter.Condition.StartsWith, DirectoryPath ) );
 					if( Filter.Conforms( context.Importer, filters ) == false )
 						return;
@@ -153,7 +158,7 @@ namespace AssetTools
 			}
 		}
 		
-		public BaseImportTask AddModule( Type type )
+		public BaseImportTask AddTask( Type type )
 		{
 			if (type == null)
 			{
@@ -165,18 +170,29 @@ namespace AssetTools
 				Debug.LogWarningFormat("Invalid Schema type {0}. Schemas must inherit from AddressableAssetGroupSchema.", type.FullName);
 				return null;
 			}
-            
-			foreach( BaseImportTask moduleObject in m_ImportTasks )
+
+			BaseImportTask importTaskInstance = (BaseImportTask)CreateInstance( type );
+			if( importTaskInstance.MaximumCount > 0 )
 			{
-				if( moduleObject.GetType() == type )
+				int sameType = 0;
+				foreach( BaseImportTask task in m_ImportTasks )
 				{
-					// TODO check to make sure has to be unique
-					Debug.LogError( "Module already exists" );
-					//return false;
+					if( task.GetType() == type )
+					{
+						sameType++;
+						if( sameType >= importTaskInstance.MaximumCount )
+							break;
+					}
+				}
+
+				if( sameType >= importTaskInstance.MaximumCount )
+				{
+					DestroyImmediate( importTaskInstance );
+					Debug.LogError( "Task count exceeded" );
+					return null;
 				}
 			}
 
-			BaseImportTask importTaskInstance = (BaseImportTask)CreateInstance( type );
 			if( importTaskInstance != null )
 			{
 				importTaskInstance.name = type.Name;
@@ -198,7 +214,7 @@ namespace AssetTools
 			return importTaskInstance;
 		}
 
-		public bool RemoveModule( int index )
+		public bool RemoveTask( int index )
 		{
 			if( index < 0 || index >= m_ImportTasks.Count )
 				return false;

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace AssetTools
 {
-	public class AssetsTreeView : TreeView
+	public class AssetsTreeView : HierarchyTreeView
 	{
 		private class AssetViewItemMenuContext
 		{

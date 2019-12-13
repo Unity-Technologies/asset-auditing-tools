@@ -45,18 +45,14 @@ General
 Import Definition Profiles
 - New Import Tasks
     - 2018+ new task "PresetPropertiesImportTask", this will be good for both importer properties and other objects
-    - PostProcessingMethod task, same as Pre but for Post
 - Look into if MonoScript cache should be used for IPreprocessor. Paving the path to no longer being reliant on AssetImporter.userData for importer versioning. With AssetDatabase V2 we can set custom dependencies for Assets. Allowing an Asset to have a dependency on the MonoScript.
     - This would still need a way of saving what versions they were previously imported with for auditing. 
 - Track movement and changes to profiles to reimport any Assets where necessary.
 - Look into custom Importer for the ScriptableObject for IDF. So it can Apply -> Then allowing reimport any required Assets on Apply.
+    - Need to investigate import order and if this is needed to effect that
 - Order task into Pre and Post import sections
-- Allow ordering task for which task runs when
-- Max number of a specific ImportTasks that can be on a Profile (1 by default)
 - rework UX of the profile inspector gui
-
 
 Auditor Window
 - Multiselect and fix working
 - Ability to fix a folder
-- Multi column view instead of single tree with value <<< value

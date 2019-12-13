@@ -34,12 +34,7 @@ namespace AssetTools
 
 		public string Name
 		{
-			get
-			{
-				if( TemplateType == SerializedPropertyType.Generic )
-					return m_PropertyName;
-				return m_PropertyName + ",  <<<  " + ExpectedValue; // TODO this will be slow :O roadmap to have a table instead of a simple tree
-			}
+			get { return m_PropertyName; }
 			set { m_PropertyName = value; }
 		}
 

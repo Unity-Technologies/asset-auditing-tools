@@ -1,6 +1,13 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [0.0.X] - 2019-XX-XX
+- Changed search for have multiple search types
+- Changed search to case-insensitive by default, adding option is search options
+- Changed top bar to use toolbar visuals
+- Fixed move up / down options for Import tasks
+- Added multicolumn view for Conform tree view
+
 ## [0.0.5] - 2019-10-09
 - Refactored the project and renaming the tools to better describe the functionality
     - note: Profiles made in the old naming will need to be reimported

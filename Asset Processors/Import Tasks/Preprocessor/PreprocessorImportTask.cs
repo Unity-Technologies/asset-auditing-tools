@@ -44,6 +44,11 @@ namespace AssetTools
 			get { return Method == null ? 0 : Method.Version; }
 		}
 
+		public override int MaximumCount
+		{
+			get { return -1; }
+		}
+		
 		public override string AssetMenuFixString
 		{
 			get
