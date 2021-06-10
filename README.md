@@ -1,3 +1,5 @@
+# This repo is deprecated and development has stopped on this
+
 # Asset Auditing Tools
 As a Unity project gets bigger, it can get hard to maintain the many Assets within a Project.
 This tool is designed to alleviate the common use of hard coding lots AssetPostprocessor classes.
